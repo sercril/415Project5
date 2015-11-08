@@ -21,7 +21,7 @@ class VertexArrayObject
 {
 	public:
 		VertexArrayObject();
-		VertexArrayObject(std::vector<GLfloat> vertexData, std::vector<GLfloat> colorData, std::vector<GLfloat> normalData, std::vector<GLfloat> uvData, std::vector<GLushort> indexData, GLuint vertposition_loc, GLuint vertex_UV, GLuint normal_loc, GLuint vertcolor_loc);
+		VertexArrayObject(std::vector<GLfloat> vertexData, std::vector<GLfloat> normalData, std::vector<GLfloat> uvData, std::vector<GLushort> indexData, GLuint program);
 		~VertexArrayObject();
 
 		void GenerateSmoothNormals();
@@ -33,7 +33,8 @@ class VertexArrayObject
 	private:
 		void LoadVerticies(std::vector<GLfloat> vertexData, std::vector<GLfloat> normalData, std::vector<GLfloat> uvData);
 
-		GLuint vertexBuffer, colorBuffer, indexBuffer, uvBuffer, normalBuffer, textureLocation, normal_loc;
+		GLuint vertexBuffer, colorBuffer, indexBuffer, uvBuffer, normalBuffer, 
+			vertposition_loc, vertcolor_loc, vertex_UV, textureLocation, normal_loc, program;
 
 		std::vector<GLfloat> vertex_data;
 		std::vector<GLushort> index_data;

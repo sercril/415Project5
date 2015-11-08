@@ -5,6 +5,7 @@
 #include <stdlib.h>
 #include <math.h>
 #include <array>
+#include <string>
 
 
 #include <GL/glew.h>
@@ -37,28 +38,33 @@ class SceneObject
 public:
 
 	SceneObject();
-	SceneObject(float length, float width, float depth, GLuint vertposition_loc, GLuint vertex_UV, GLuint normal_loc, GLuint vertcolor_loc);
-	SceneObject(float radius, 
+	SceneObject(string File, float length, float width, float depth, GLuint program);
+	SceneObject(string textureFile, 
+				float radius,
 				std::vector<GLfloat> vertex_data, 
 				std::vector<GLfloat> normal_data, 
 				std::vector<GLfloat> uv_data, 
 				std::vector<GLushort> index_data, 
-				GLuint vertposition_loc, 
-				GLuint vertex_UV, 
-				GLuint normal_loc,
-				GLuint vertcolor_loc);
+				GLuint program);
 	~SceneObject();
 
+	
+
+	void Draw();
+
+	void SetTranslation(gmtl::Matrix44f t);
+	void SetRotation(gmtl::Quatf r);
 	void SetTexture(Texture t);
 
-	gmtl::Matrix44f matrix, scale;
-	float length, width, depth, radius;
+	gmtl::Matrix44f scale, translation;
+	gmtl::Quatf rotation;
+	float length, width, depth, radius, specCoefficient, shine;
 	VertexArrayObject VAO;
 
 	Texture texture;
 
 private:
-
+	void Init();
 };
 
 #endif __SCENE_OBJECT_H__

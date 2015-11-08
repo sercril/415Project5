@@ -24,13 +24,16 @@ struct VectorLessThan : binary_function<gmtl::Vec3f,gmtl::Vec3f,bool>
 };
 
 VertexArrayObject::VertexArrayObject() {}
-VertexArrayObject::VertexArrayObject(std::vector<GLfloat> vertexData, std::vector<GLfloat> colorData, std::vector<GLfloat> normalData, std::vector<GLfloat> uvData, std::vector<GLushort> indexData, GLuint vertposition_loc, GLuint vertex_UV, GLuint normal_loc, GLuint vertcolor_loc)
+VertexArrayObject::VertexArrayObject(std::vector<GLfloat> vertexData,  std::vector<GLfloat> normalData, std::vector<GLfloat> uvData, std::vector<GLushort> indexData, GLuint program)
 {
 
 	this->vertex_data = vertexData;
 	this->index_data = indexData;
 
-	this->normal_loc = normal_loc;
+	this->vertposition_loc = glGetAttribLocation(program, "vertexPosition");
+	this->vertcolor_loc = glGetAttribLocation(program, "vertexColor");
+	this->vertex_UV = glGetAttribLocation(program, "vertexUV");
+	this->normal_loc = glGetAttribLocation(program, "vertexNormal");
 
 	/*** VERTEX ARRAY OBJECT SETUP***/
 	// Create/Generate the Vertex Array Object
@@ -44,25 +47,18 @@ VertexArrayObject::VertexArrayObject(std::vector<GLfloat> vertexData, std::vecto
 	glBindBuffer(GL_ARRAY_BUFFER, this->vertexBuffer);
 	glBufferData(GL_ARRAY_BUFFER, sizeof(&vertexData[0])*vertexData.size(), &vertexData[0], GL_DYNAMIC_DRAW);
 	// Specify data location and organization
-	glVertexAttribPointer(vertposition_loc, // This number must match the layout in the shader
+	glVertexAttribPointer(this->vertposition_loc, // This number must match the layout in the shader
 		3, // Size
 		GL_FLOAT, // Type
 		GL_FALSE, // Is normalized
 		0, ((void*)0));
-	glEnableVertexAttribArray(vertposition_loc);
-
+	glEnableVertexAttribArray(this->vertposition_loc);
 	
 	glGenBuffers(1, &this->uvBuffer);
 	glBindBuffer(GL_ARRAY_BUFFER, this->uvBuffer);
 	glBufferData(GL_ARRAY_BUFFER, sizeof(&uvData[0])*uvData.size(), &uvData[0], GL_DYNAMIC_DRAW);
-	glVertexAttribPointer(vertex_UV, 2, GL_FLOAT, GL_FALSE, 0, ((void*)0));
-	glEnableVertexAttribArray(vertex_UV);
-
-	glGenBuffers(1, &this->colorBuffer);
-	glBindBuffer(GL_ARRAY_BUFFER, this->colorBuffer);
-	glBufferData(GL_ARRAY_BUFFER, sizeof(&colorData[0])*colorData.size(), &colorData[0], GL_DYNAMIC_DRAW);
-	glVertexAttribPointer(vertcolor_loc, 2, GL_FLOAT, GL_FALSE, 0, ((void*)0));
-	glEnableVertexAttribArray(vertcolor_loc);
+	glVertexAttribPointer(this->vertex_UV, 2, GL_FLOAT, GL_FALSE, 0, ((void*)0));
+	glEnableVertexAttribArray(this->vertex_UV);
 
 	glGenBuffers(1, &this->normalBuffer);
 	glBindBuffer(GL_ARRAY_BUFFER, this->normalBuffer);

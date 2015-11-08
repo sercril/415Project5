@@ -38,7 +38,7 @@ struct SceneNode
 	ObjectType type;
 	SceneNode* parent;
 	std::vector<SceneNode *> children;
-	float specCoefficient, shine;
+	
 
 
 	SceneNode()
@@ -73,9 +73,6 @@ int mouseX, mouseY,
 mouseDeltaX, mouseDeltaY,
 ambientFlag, diffuseFlag, specFlag, texFlag, floorTexFlag, ballTexFlag;
 
-unsigned int textureWidth, textureHeight;
-unsigned char *imageData;
-
 bool genSmoothNorms, genSplitNorms;
 
 float azimuth, elevation, ballRadius, floorY, cameraZFactor,
@@ -84,7 +81,7 @@ float azimuth, elevation, ballRadius, floorY, cameraZFactor,
 
 struct Keyframe c;
 
-GLuint Matrix_loc, vertposition_loc, vertcolor_loc, normal_loc, modelview_loc,
+GLuint program, Matrix_loc, vertposition_loc, vertcolor_loc, normal_loc, modelview_loc,
 		lightPosition_loc, specCoefficient_loc, upVector_loc, 
 		ambientLight_loc, diffuseLight_loc, specularLight_loc, shine_loc,
 		ambientFlag_loc, diffuseFlag_loc, specularFlag_loc, texFlag_loc,
@@ -159,9 +156,13 @@ void cameraRotate()
 #pragma region Helper Functions
 
 
-void LoadTexture(char* filename)
+Texture LoadTexture(char* filename)
 {
+	unsigned int textureWidth, textureHeight;
+	unsigned char *imageData;
+
 	LoadPPM(filename, &textureWidth, &textureHeight, &imageData, 1);
+	return Texture(textureWidth, textureHeight, imageData);
 }
 
 void importBallData()
@@ -215,30 +216,27 @@ void buildGraph()
 	SceneNode* ball = new SceneNode();
 	SceneNode* floor = new SceneNode();
 	gmtl::Matrix44f initialTranslation, moveLeft;
+	gmtl::Quatf initialRotation;
+
 		
 	//Ball
 	importBallData();
 	ball->type = BALL;
 	ball->parent = NULL;
-	ball->object = SceneObject(ballRadius, ball_vertex_data, ball_normal_data, ball_uv_data, ball_index_data, vertposition_loc, vertex_UV, normal_loc, vertcolor_loc);
+	ball->object = SceneObject(ballRadius, ball_vertex_data, ball_normal_data, ball_uv_data, ball_index_data, program);
 	ball->children.clear();
 
 	initialTranslation = gmtl::makeTrans<gmtl::Matrix44f>(gmtl::Vec3f(0.0f, 0.0f, -5.0f));
 	initialTranslation.setState(gmtl::Matrix44f::TRANS);
-	ball->object.matrix = ball->object.matrix * initialTranslation;
-
-	LoadTexture("moonmap.ppm");
-	ball->object.SetTexture(Texture(textureWidth, textureHeight, imageData));
-
-	ball->specCoefficient = ballSpec;
-	ball->shine = ballShine;
+	ball->object.SetTranslation(initialTranslation);
+	ball->object.SetTexture(LoadTexture("moonmap.ppm"));
 
 	sceneGraph.push_back(ball);
 
 	//Floor
 	floor->type = FLOOR;
 	floor->parent = NULL;
-	floor->object = SceneObject(ballRadius * 10, 1.0f, ballRadius * 10, vertposition_loc, vertex_UV, normal_loc, vertcolor_loc);
+	floor->object = SceneObject(ballRadius * 10, 1.0f, ballRadius * 10, program);
 	floor->children.clear();
 	initialTranslation = gmtl::makeTrans<gmtl::Matrix44f>(gmtl::Vec3f(0.0f, floorY*-1.0f, 0.0f));
 	initialTranslation.setState(gmtl::Matrix44f::TRANS);
@@ -246,12 +244,8 @@ void buildGraph()
 	moveLeft = gmtl::makeTrans<gmtl::Matrix44f>(gmtl::Vec3f(((ballRadius * 10)*-1.0f) / 2, 0.0f, ((ballRadius * 10)*-1.0f) / 2));
 	moveLeft.setState(gmtl::Matrix44f::TRANS);
 	initialTranslation = moveLeft * initialTranslation;
-	floor->object.matrix = floor->object.matrix * initialTranslation;
-	LoadTexture("dirt.ppm");
-	floor->object.SetTexture(Texture(textureWidth, textureHeight, imageData));
-
-	floor->specCoefficient = floorSpec;
-	floor->shine = floorShine;
+	floor->object.SetTranslation(initialTranslation);
+	floor->object.SetTexture(LoadTexture("dirt.ppm"));
 
 	sceneGraph.push_back(floor);
 }
@@ -267,19 +261,15 @@ void renderGraph(std::vector<SceneNode*> graph, gmtl::Matrix44f mv)
 		for (int i = 0; i < graph.size(); ++i)
 		{
 			
+			//Should all be graph[i]->draw();
 
-			
 			switch (graph[i]->type)
 			{
 				case BALL:
-					graph[i]->object.matrix *= gmtl::makeTrans<gmtl::Matrix44f>(ballDelta);
-					graph[i]->specCoefficient = ballSpec;
-					graph[i]->shine = ballShine;
+					graph[i]->object.SetTranslation(gmtl::makeTrans<gmtl::Matrix44f>(ballDelta));
 					texFlag = ballTexFlag;
 					break; 
 				case FLOOR:
-					graph[i]->specCoefficient = floorSpec;
-					graph[i]->shine = floorShine;
 					texFlag = floorTexFlag;
 					break;
 			}
@@ -316,8 +306,8 @@ void renderGraph(std::vector<SceneNode*> graph, gmtl::Matrix44f mv)
 			lightPoint = mv * lightPosition;
 			glUniform3f(lightPosition_loc, lightPoint[0], lightPoint[1], lightPoint[2]);
 			glUniform4f(upVector_loc, mv[1][0], mv[1][1], mv[1][2], 0);
-			glUniform1f(specCoefficient_loc, graph[i]->specCoefficient);
-			glUniform1f(shine_loc, graph[i]->shine);
+			glUniform1f(specCoefficient_loc, graph[i]->object.specCoefficient);
+			glUniform1f(shine_loc, graph[i]->object.shine);
 
 			glUniform3f(ambientLight_loc, 1.0f, 0.0f, 0.0f);
 			glUniform3f(diffuseLight_loc, 0.0f, 1.0f, 0.0f);
@@ -541,14 +531,11 @@ void init()
 	{ GL_FRAGMENT_SHADER, "Cube_Fragment_Shader.frag" },
 	{ GL_NONE, NULL } };
 
-	GLuint program = LoadShaders(shaders);
+	program = LoadShaders(shaders);
 	glUseProgram(program);
 
 	//Get the shader parameter locations for passing data to shaders
-	vertposition_loc = glGetAttribLocation(program, "vertexPosition");
-	vertcolor_loc = glGetAttribLocation(program, "vertexColor");
-	vertex_UV = glGetAttribLocation(program, "vertexUV");	
-	normal_loc = glGetAttribLocation(program, "vertexNormal");
+	
 	
 	Matrix_loc = glGetUniformLocation(program, "Matrix");
 	NormalMatrix = glGetUniformLocation(program, "NormalMatrix");
