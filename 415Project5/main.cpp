@@ -165,50 +165,6 @@ Texture LoadTexture(char* filename)
 	return Texture(textureWidth, textureHeight, imageData);
 }
 
-void importBallData()
-{
-	ifstream fp;
-	int i = 0, j = 0, k=0, numVerticies, numIndicies, numPolygons;
-
-	fp.open("SpherePNT.txt", ios_base::in);
-
-	if (fp)
-	{
-
-		for (std::string line; std::getline(fp, line); ++i)
-		{
-			std::istringstream in(line);
-
-			if (i == 0)
-			{
-				in >> numVerticies;
-				ball_vertex_data.resize(numVerticies*3);
-				ball_normal_data.resize(numVerticies * 3);
-				ball_uv_data.resize(numVerticies * 2);
-			}
-			else if (i > 0 && i <= numVerticies)
-			{
-				in >> ball_vertex_data[j] >> ball_vertex_data[j + 1] >> ball_vertex_data[j + 2] >> ball_normal_data[j] >> ball_normal_data[j + 1] >> ball_normal_data[j + 2] >> ball_uv_data[k] >> ball_uv_data[k+1];
-				j += 3;
-				k += 2;
-			}
-			else if (i == (numVerticies + 1))
-			{
-				in >> numPolygons;
-				ball_index_data.resize(numPolygons*3);
-				j = 0;
-			}
-			else if (i > (numVerticies + 1))
-			{
-				in >> numIndicies >> ball_index_data[j] >> ball_index_data[j + 1] >> ball_index_data[j + 2];
-				j+=3;
-			}
-		}
-
-		fp.close();
-	}
-}
-
 
 void buildGraph()
 {
@@ -220,10 +176,9 @@ void buildGraph()
 
 		
 	//Ball
-	importBallData();
 	ball->type = BALL;
 	ball->parent = NULL;
-	ball->object = SceneObject(ballRadius, ball_vertex_data, ball_normal_data, ball_uv_data, ball_index_data, program);
+	ball->object = SceneObject("OBJs/sphere.obj",ballRadius, program);
 	ball->children.clear();
 
 	initialTranslation = gmtl::makeTrans<gmtl::Matrix44f>(gmtl::Vec3f(0.0f, 0.0f, -5.0f));
@@ -236,7 +191,7 @@ void buildGraph()
 	//Floor
 	floor->type = FLOOR;
 	floor->parent = NULL;
-	floor->object = SceneObject(ballRadius * 10, 1.0f, ballRadius * 10, program);
+	floor->object = SceneObject("OBJs/cube.obj", ballRadius * 10, 1.0f, ballRadius * 10, program);
 	floor->children.clear();
 	initialTranslation = gmtl::makeTrans<gmtl::Matrix44f>(gmtl::Vec3f(0.0f, floorY*-1.0f, 0.0f));
 	initialTranslation.setState(gmtl::Matrix44f::TRANS);

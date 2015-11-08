@@ -12,7 +12,7 @@ BlendObj::BlendObj(string filename)
 	if (fp)
 	{
 
-		for (std::string line; std::getline(fp, line); ++i)
+		for (std::string line; std::getline(fp, line);)
 		{
 			std::istringstream in(line);
 			gmtl::Vec3f newVec3;

@@ -24,11 +24,15 @@ struct VectorLessThan : binary_function<gmtl::Vec3f,gmtl::Vec3f,bool>
 };
 
 VertexArrayObject::VertexArrayObject() {}
-VertexArrayObject::VertexArrayObject(std::vector<GLfloat> vertexData,  std::vector<GLfloat> normalData, std::vector<GLfloat> uvData, std::vector<GLushort> indexData, GLuint program)
+VertexArrayObject::VertexArrayObject(string objectFile, GLuint program)
 {
 
-	this->vertex_data = vertexData;
-	this->index_data = indexData;
+	BlendObj thisObj = BlendObj(objectFile);
+
+	this->verticies = thisObj.importedVerticies;
+	this->index_data = thisObj.importedIndexData;
+
+	this->GetData();
 
 	this->vertposition_loc = glGetAttribLocation(program, "vertexPosition");
 	this->vertcolor_loc = glGetAttribLocation(program, "vertexColor");
@@ -45,7 +49,7 @@ VertexArrayObject::VertexArrayObject(std::vector<GLfloat> vertexData,  std::vect
 	glGenBuffers(1, &this->vertexBuffer);
 	// Bind the Vertex Buffer Object.
 	glBindBuffer(GL_ARRAY_BUFFER, this->vertexBuffer);
-	glBufferData(GL_ARRAY_BUFFER, sizeof(&vertexData[0])*vertexData.size(), &vertexData[0], GL_DYNAMIC_DRAW);
+	glBufferData(GL_ARRAY_BUFFER, sizeof(&this->vertex_data[0])*this->vertex_data.size(), &this->vertex_data[0], GL_DYNAMIC_DRAW);
 	// Specify data location and organization
 	glVertexAttribPointer(this->vertposition_loc, // This number must match the layout in the shader
 		3, // Size
@@ -56,41 +60,48 @@ VertexArrayObject::VertexArrayObject(std::vector<GLfloat> vertexData,  std::vect
 	
 	glGenBuffers(1, &this->uvBuffer);
 	glBindBuffer(GL_ARRAY_BUFFER, this->uvBuffer);
-	glBufferData(GL_ARRAY_BUFFER, sizeof(&uvData[0])*uvData.size(), &uvData[0], GL_DYNAMIC_DRAW);
+	glBufferData(GL_ARRAY_BUFFER, sizeof(&this->uv_data[0])*this->uv_data.size(), &this->uv_data[0], GL_DYNAMIC_DRAW);
 	glVertexAttribPointer(this->vertex_UV, 2, GL_FLOAT, GL_FALSE, 0, ((void*)0));
 	glEnableVertexAttribArray(this->vertex_UV);
 
 	glGenBuffers(1, &this->normalBuffer);
 	glBindBuffer(GL_ARRAY_BUFFER, this->normalBuffer);
-	glBufferData(GL_ARRAY_BUFFER, sizeof(&normalData[0])*normalData.size(), &normalData[0], GL_DYNAMIC_DRAW);
+	glBufferData(GL_ARRAY_BUFFER, sizeof(&this->normal_data[0])*this->normal_data.size(), &this->normal_data[0], GL_DYNAMIC_DRAW);
 	glVertexAttribPointer(this->normal_loc, 3, GL_FLOAT, GL_FALSE, 0, ((void*)0));
 	glEnableVertexAttribArray(this->normal_loc);
 	
 	glGenBuffers(1, &this->indexBuffer);
 	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, this->indexBuffer);
 	glBufferData(GL_ELEMENT_ARRAY_BUFFER,
-		sizeof(&indexData[0])*indexData.size(),
-		&indexData[0], GL_DYNAMIC_DRAW);
+		sizeof(&this->index_data[0])*this->index_data.size(),
+		&this->index_data[0], GL_DYNAMIC_DRAW);
 
-
-	this->LoadVerticies(vertexData, normalData, uvData);
 }
 
 VertexArrayObject::~VertexArrayObject()
 {
 }
 
-void VertexArrayObject::LoadVerticies(std::vector<GLfloat> vertexData, std::vector<GLfloat> normalData, std::vector<GLfloat> uvData)
-{
-	std::vector<GLfloat>::iterator vit;
-	std::vector<GLfloat>::iterator nit;
-	std::vector<GLfloat>::iterator uvit;
-	for (vit = vertexData.begin(), nit = normalData.begin(), uvit = uvData.begin(); (vit < vertexData.end() || nit < normalData.end() || uvit < uvData.end()); vit += 3, nit += 3, uvit+=2)
-	{
-		Vertex v = Vertex(gmtl::Vec3f(*vit, *(vit + 1), *(vit + 2)), gmtl::Vec3f(*nit, *(nit + 1), *(nit + 2)), *(uvit), *(uvit+1));
 
-		this->verticies.push_back(v);
+void VertexArrayObject::GetData()
+{
+	this->vertex_data.clear();
+	this->normal_data.clear();
+	this->uv_data.clear();
+	for (std::vector<Vertex>::iterator it = this->verticies.begin(); it < this->verticies.end(); ++it)
+	{
+		this->vertex_data.push_back(it->position[0]);
+		this->vertex_data.push_back(it->position[1]);
+		this->vertex_data.push_back(it->position[2]);
+
+		this->normal_data.push_back(it->normal[0]);
+		this->normal_data.push_back(it->normal[1]);
+		this->normal_data.push_back(it->normal[2]);
+
+		this->uv_data.push_back(it->u);
+		this->uv_data.push_back(it->v);
 	}
+
 }
 
 void VertexArrayObject::GenerateSmoothNormals()

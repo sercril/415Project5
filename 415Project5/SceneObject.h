@@ -38,13 +38,9 @@ class SceneObject
 public:
 
 	SceneObject();
-	SceneObject(string File, float length, float width, float depth, GLuint program);
-	SceneObject(string textureFile, 
+	SceneObject(string objectFile, float length, float width, float depth, GLuint program);
+	SceneObject(string objectFile,
 				float radius,
-				std::vector<GLfloat> vertex_data, 
-				std::vector<GLfloat> normal_data, 
-				std::vector<GLfloat> uv_data, 
-				std::vector<GLushort> index_data, 
 				GLuint program);
 	~SceneObject();
 

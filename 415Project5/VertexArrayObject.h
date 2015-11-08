@@ -14,6 +14,7 @@
 
 #include "Vertex.h"
 #include "Texture.h"
+#include "BlendObj.h"
 
 using namespace std;
 
@@ -21,8 +22,10 @@ class VertexArrayObject
 {
 	public:
 		VertexArrayObject();
-		VertexArrayObject(std::vector<GLfloat> vertexData, std::vector<GLfloat> normalData, std::vector<GLfloat> uvData, std::vector<GLushort> indexData, GLuint program);
+		VertexArrayObject(string objectFile, GLuint program);
 		~VertexArrayObject();
+
+		void GetData();
 
 		void GenerateSmoothNormals();
 		void GenerateSplitNormals();
@@ -36,7 +39,7 @@ class VertexArrayObject
 		GLuint vertexBuffer, colorBuffer, indexBuffer, uvBuffer, normalBuffer, 
 			vertposition_loc, vertcolor_loc, vertex_UV, textureLocation, normal_loc, program;
 
-		std::vector<GLfloat> vertex_data;
+		std::vector<GLfloat> vertex_data, uv_data, normal_data;
 		std::vector<GLushort> index_data;
 
 };
