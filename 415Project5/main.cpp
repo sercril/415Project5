@@ -26,25 +26,6 @@ using namespace std;
 
 #pragma region Structs and Enums
 
-enum ObjectType
-{
-	FLOOR = 0,
-	BALL
-};
-
-struct SceneNode
-{	
-	SceneObject object;
-	ObjectType type;
-	SceneNode* parent;
-	std::vector<SceneNode *> children;
-	
-	SceneNode()
-	{
-
-	}
-};
-
 
 
 struct Keyframe
@@ -94,7 +75,7 @@ gmtl::Matrix44f view, modelView, viewScale, camera, projection, normalMatrix,
 				elevationRotation, azimuthRotation, cameraZ, viewRotation;
 
 
-std::vector<SceneNode*> sceneGraph;
+std::vector<SceneObject*> sceneGraph;
 std::vector<GLfloat> ball_vertex_data, ball_normal_data, ball_uv_data;
 std::vector<GLushort> ball_index_data;
 std::vector<Keyframe> keyframes;
@@ -167,29 +148,27 @@ Texture LoadTexture(char* filename)
 void buildGraph()
 {
 	
-	SceneNode* ball = new SceneNode();
-	SceneNode* floor = new SceneNode();
+	SceneObject* ball = new SceneObject("OBJs/sphere.obj", ballRadius, program);
+	SceneObject* floor = new SceneObject("OBJs/cube.obj", ballRadius * 10, 1.0f, ballRadius * 10, program);
 	gmtl::Matrix44f initialTranslation, moveLeft;
 	gmtl::Quatf initialRotation;
 
 		
 	//Ball
 	ball->type = BALL;
-	ball->parent = NULL;
-	ball->object = SceneObject("OBJs/sphere.obj",ballRadius, program);
+	ball->parent = NULL; 
 	ball->children.clear();
 
 	initialTranslation = gmtl::makeTrans<gmtl::Matrix44f>(gmtl::Vec3f(0.0f, 0.0f, -5.0f));
 	initialTranslation.setState(gmtl::Matrix44f::TRANS);
-	ball->object.SetTranslation(initialTranslation);
-	ball->object.SetTexture(LoadTexture("moonmap.ppm"));
+	ball->SetTranslation(initialTranslation);
+	ball->SetTexture(LoadTexture("moonmap.ppm"));
 
 	sceneGraph.push_back(ball);
 
 	//Floor
 	floor->type = FLOOR;
 	floor->parent = NULL;
-	floor->object = SceneObject("OBJs/cube.obj", ballRadius * 10, 1.0f, ballRadius * 10, program);
 	floor->children.clear();
 	initialTranslation = gmtl::makeTrans<gmtl::Matrix44f>(gmtl::Vec3f(0.0f, floorY*-1.0f, 0.0f));
 	initialTranslation.setState(gmtl::Matrix44f::TRANS);
@@ -197,13 +176,13 @@ void buildGraph()
 	moveLeft = gmtl::makeTrans<gmtl::Matrix44f>(gmtl::Vec3f(((ballRadius * 10)*-1.0f) / 2, 0.0f, ((ballRadius * 10)*-1.0f) / 2));
 	moveLeft.setState(gmtl::Matrix44f::TRANS);
 	initialTranslation = moveLeft * initialTranslation;
-	floor->object.SetTranslation(initialTranslation);
-	floor->object.SetTexture(LoadTexture("dirt.ppm"));
+	floor->SetTranslation(initialTranslation);
+	floor->SetTexture(LoadTexture("dirt.ppm"));
 
 	sceneGraph.push_back(floor);
 }
 
-void renderGraph(std::vector<SceneNode*> graph, gmtl::Matrix44f mv)
+void renderGraph(std::vector<SceneObject*> graph, gmtl::Matrix44f mv)
 {
 	gmtl::Matrix44f thisTransform, renderTransform, inverseTransform;
 
@@ -219,7 +198,7 @@ void renderGraph(std::vector<SceneNode*> graph, gmtl::Matrix44f mv)
 			switch (graph[i]->type)
 			{
 				case BALL:
-					graph[i]->object.SetTranslation(gmtl::makeTrans<gmtl::Matrix44f>(ballDelta));
+					graph[i]->SetTranslation(gmtl::makeTrans<gmtl::Matrix44f>(ballDelta));
 					texFlag = ballTexFlag;
 					break; 
 				case FLOOR:

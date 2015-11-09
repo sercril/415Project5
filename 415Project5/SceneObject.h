@@ -18,6 +18,12 @@
 
 using namespace std;
 
+enum ObjectType
+{
+	FLOOR = 0,
+	BALL
+};
+
 struct Texture
 {
 	unsigned int textureWidth, textureHeight;
