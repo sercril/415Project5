@@ -30,17 +30,18 @@ class VertexArrayObject
 		void GenerateSmoothNormals();
 		void GenerateSplitNormals();
 
-		GLuint vertexArray;
+		GLuint vertexArray, matrix_loc, program;
 		std::vector<Vertex> verticies;
+		std::vector<GLushort> index_data;
 
 	private:
 		void LoadVerticies(std::vector<GLfloat> vertexData, std::vector<GLfloat> normalData, std::vector<GLfloat> uvData);
 
 		GLuint vertexBuffer, colorBuffer, indexBuffer, uvBuffer, normalBuffer, 
-			vertposition_loc, vertcolor_loc, vertex_UV, textureLocation, normal_loc, program;
+			vertposition_loc, vertcolor_loc, vertex_UV, textureLocation, normal_loc;
 
 		std::vector<GLfloat> vertex_data, uv_data, normal_data;
-		std::vector<GLushort> index_data;
+		
 
 };
 

@@ -34,6 +34,7 @@ VertexArrayObject::VertexArrayObject(string objectFile, GLuint program)
 
 	this->GetData();
 
+	this->matrix_loc = glGetUniformLocation(program, "Matrix");
 	this->vertposition_loc = glGetAttribLocation(program, "vertexPosition");
 	this->vertcolor_loc = glGetAttribLocation(program, "vertexColor");
 	this->vertex_UV = glGetAttribLocation(program, "vertexUV");

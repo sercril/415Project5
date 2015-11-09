@@ -230,39 +230,19 @@ void renderGraph(std::vector<SceneNode*> graph, gmtl::Matrix44f mv)
 			}
 
 
-			gmtl::Matrix44f newMV = mv * graph[i]->object.matrix;
 
-			newMV = newMV * graph[i]->object.scale;
-
-			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, graph[i]->object.texture.textureHeight, graph[i]->object.texture.textureWidth, 0, GL_RGB, GL_UNSIGNED_BYTE, graph[i]->object.texture.imageData);
-
-			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-
-			//Render
-			renderTransform = projection * newMV;
 			
-			glBindVertexArray(graph[i]->object.VAO.vertexArray);
+
+			
 			// Send a different transformation matrix to the shader
-			glUniformMatrix4fv(Matrix_loc, 1, GL_FALSE, &renderTransform[0][0]);
+			
 			glUniformMatrix4fv(NormalMatrix, 1, GL_FALSE, &viewRotation[0][0]);
 			
-			if (genSmoothNorms)
-			{
-				graph[i]->object.VAO.GenerateSmoothNormals();
-			}
-			else if (genSplitNorms)
-			{
-				graph[i]->object.VAO.GenerateSplitNormals();
-			}
 
 			lightPoint = mv * lightPosition;
 			glUniform3f(lightPosition_loc, lightPoint[0], lightPoint[1], lightPoint[2]);
-			glUniform4f(upVector_loc, mv[1][0], mv[1][1], mv[1][2], 0);
-			glUniform1f(specCoefficient_loc, graph[i]->object.specCoefficient);
-			glUniform1f(shine_loc, graph[i]->object.shine);
+			
+			
 
 			glUniform3f(ambientLight_loc, 1.0f, 0.0f, 0.0f);
 			glUniform3f(diffuseLight_loc, 0.0f, 1.0f, 0.0f);
@@ -492,12 +472,12 @@ void init()
 	//Get the shader parameter locations for passing data to shaders
 	
 	
-	Matrix_loc = glGetUniformLocation(program, "Matrix");
+	
 	NormalMatrix = glGetUniformLocation(program, "NormalMatrix");
 	lightPosition_loc = glGetUniformLocation(program, "lightPosition");
-	upVector_loc = glGetUniformLocation(program, "upVector");
+	
 	specCoefficient_loc = glGetUniformLocation(program, "specCoefficient");
-	texture_location = glGetUniformLocation(program, "texture_Colors");
+	
 	shine_loc = glGetUniformLocation(program, "shine");
 
 	ambientLight_loc = glGetUniformLocation(program, "ambientLight");
@@ -514,6 +494,7 @@ void init()
 
 	glActiveTexture(GL_TEXTURE0);
 
+	texture_location = glGetUniformLocation(program, "texture_Colors");
 	glBindTexture(GL_TEXTURE_2D, texture_location);
 
 	

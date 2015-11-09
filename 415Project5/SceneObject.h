@@ -46,7 +46,7 @@ public:
 
 	
 
-	void Draw();
+	void Draw(gmtl::Matrix44f viewMatrix, gmtl::Matrix44f projection);
 
 	void SetTranslation(gmtl::Matrix44f t);
 	void SetRotation(gmtl::Quatf r);
@@ -61,6 +61,8 @@ public:
 
 private:
 	void Init();
+
+	GLuint specCoefficient_loc, shine_loc, upVector_loc, modelview_loc;
 };
 
 #endif __SCENE_OBJECT_H__
