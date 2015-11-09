@@ -39,8 +39,6 @@ struct SceneNode
 	SceneNode* parent;
 	std::vector<SceneNode *> children;
 	
-
-
 	SceneNode()
 	{
 
@@ -248,23 +246,9 @@ void renderGraph(std::vector<SceneNode*> graph, gmtl::Matrix44f mv)
 			glUniform3f(diffuseLight_loc, 0.0f, 1.0f, 0.0f);
 			glUniform3f(specularLight_loc, 0.0f, 0.0f, 1.0f);
 
-			glUniform1i(ambientFlag_loc, ambientFlag);
-			glUniform1i(diffuseFlag_loc, diffuseFlag);
-			glUniform1i(specularFlag_loc, specFlag);
-
-			glUniform1i(texFlag_loc, texFlag);
-
-			glUniformMatrix4fv(modelview_loc, 1, GL_FALSE, &newMV[0][0]);
-
-			// Draw the transformed cuboid
-			glEnable(GL_PRIMITIVE_RESTART);
-			glPrimitiveRestartIndex(0xFFFF);
-			glDrawElements(GL_TRIANGLES, INDECIES, GL_UNSIGNED_SHORT, NULL);
 			
-			if (!graph[i]->children.empty())
-			{
-				renderGraph(graph[i]->children, newMV);
-			}
+
+			
 
 		}
 	}
@@ -476,21 +460,9 @@ void init()
 	NormalMatrix = glGetUniformLocation(program, "NormalMatrix");
 	lightPosition_loc = glGetUniformLocation(program, "lightPosition");
 	
-	specCoefficient_loc = glGetUniformLocation(program, "specCoefficient");
-	
-	shine_loc = glGetUniformLocation(program, "shine");
-
 	ambientLight_loc = glGetUniformLocation(program, "ambientLight");
 	diffuseLight_loc = glGetUniformLocation(program, "diffuseLight");
 	specularLight_loc = glGetUniformLocation(program, "specularLight");
-
-	ambientFlag_loc = glGetUniformLocation(program, "ambientFlag");
-	diffuseFlag_loc = glGetUniformLocation(program, "diffuseFlag");
-	specularFlag_loc = glGetUniformLocation(program, "specFlag");
-
-	texFlag_loc = glGetUniformLocation(program, "texFlag");
-
-	modelview_loc = glGetUniformLocation(program, "modelview");
 
 	glActiveTexture(GL_TEXTURE0);
 
