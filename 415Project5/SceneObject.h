@@ -58,10 +58,15 @@ public:
 	void SetRotation(gmtl::Quatf r);
 	void SetTexture(Texture t);
 
+	float length, width, depth, radius, specCoefficient, shine;
+
 	gmtl::Matrix44f scale, translation;
 	gmtl::Quatf rotation;
-	float length, width, depth, radius, specCoefficient, shine;
+	
 	VertexArrayObject VAO;
+	SceneObject* parent;
+	ObjectType type;
+	std::vector<SceneObject *> children;
 
 	Texture texture;
 
