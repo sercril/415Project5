@@ -94,9 +94,14 @@ void SceneObject::Draw(gmtl::Matrix44f viewMatrix, gmtl::Matrix44f projection)
 	glPrimitiveRestartIndex(0xFFFF);
 	glDrawElements(GL_TRIANGLES, this->VAO.index_data.size(), GL_UNSIGNED_SHORT, NULL);
 
-	if (!graph[i]->children.empty())
+	if (!this->children.empty())
 	{
-		renderGraph(graph[i]->children, newMV);
+		for (std::vector<SceneObject *>::iterator it = this->children.begin();
+			it < this->children.end();
+			++it)
+		{
+			(*it)->Draw(newMV, projection);
+		}		
 	}
 }
 

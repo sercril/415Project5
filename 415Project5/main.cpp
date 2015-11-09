@@ -225,7 +225,7 @@ void renderGraph(std::vector<SceneObject*> graph, gmtl::Matrix44f mv)
 			glUniform3f(diffuseLight_loc, 0.0f, 1.0f, 0.0f);
 			glUniform3f(specularLight_loc, 0.0f, 0.0f, 1.0f);
 
-			
+			graph[i]->Draw(mv, projection);
 
 			
 

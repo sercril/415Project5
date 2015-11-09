@@ -50,8 +50,6 @@ public:
 				GLuint program);
 	~SceneObject();
 
-	
-
 	void Draw(gmtl::Matrix44f viewMatrix, gmtl::Matrix44f projection);
 
 	void SetTranslation(gmtl::Matrix44f t);
@@ -59,15 +57,12 @@ public:
 	void SetTexture(Texture t);
 
 	float length, width, depth, radius, specCoefficient, shine;
-
 	gmtl::Matrix44f scale, translation;
-	gmtl::Quatf rotation;
-	
+	gmtl::Quatf rotation;	
 	VertexArrayObject VAO;
 	SceneObject* parent;
 	ObjectType type;
 	std::vector<SceneObject *> children;
-
 	Texture texture;
 
 private:
