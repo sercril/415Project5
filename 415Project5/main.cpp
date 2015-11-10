@@ -60,7 +60,7 @@ float azimuth, elevation, ballRadius, floorY, cameraZFactor,
 
 struct Keyframe c;
 
-GLuint program, Matrix_loc, vertposition_loc, vertcolor_loc, normal_loc, modelview_loc,
+GLuint program, Matrix_loc, vertposition_loc, normal_loc, modelview_loc,
 		lightPosition_loc, specCoefficient_loc, upVector_loc, 
 		ambientLight_loc, diffuseLight_loc, specularLight_loc, shine_loc,
 		ambientFlag_loc, diffuseFlag_loc, specularFlag_loc, texFlag_loc,
@@ -184,10 +184,6 @@ void buildGraph()
 
 void renderGraph(std::vector<SceneObject*> graph, gmtl::Matrix44f mv)
 {
-	gmtl::Matrix44f thisTransform, renderTransform, inverseTransform;
-
-	gmtl::identity(thisTransform);
-
 	if(!graph.empty())
 	{
 		for (int i = 0; i < graph.size(); ++i)
@@ -205,12 +201,7 @@ void renderGraph(std::vector<SceneObject*> graph, gmtl::Matrix44f mv)
 					texFlag = floorTexFlag;
 					break;
 			}
-
-
-
-			
-
-			
+			glBindVertexArray(graph[i]->VAO.vertexArray);
 			// Send a different transformation matrix to the shader
 			
 			glUniformMatrix4fv(NormalMatrix, 1, GL_FALSE, &viewRotation[0][0]);
@@ -220,10 +211,10 @@ void renderGraph(std::vector<SceneObject*> graph, gmtl::Matrix44f mv)
 			glUniform3f(lightPosition_loc, lightPoint[0], lightPoint[1], lightPoint[2]);
 			
 			
-
-			glUniform3f(ambientLight_loc, 1.0f, 0.0f, 0.0f);
-			glUniform3f(diffuseLight_loc, 0.0f, 1.0f, 0.0f);
-			glUniform3f(specularLight_loc, 0.0f, 0.0f, 1.0f);
+			
+			glUniform3f(ambientLight_loc, 1.0f, 1.0f, 1.0f);
+			glUniform3f(diffuseLight_loc, 1.0f, 1.0f, 1.0f);
+			glUniform3f(specularLight_loc, 1.0f, 1.0f, 1.0f);
 
 			graph[i]->Draw(mv, projection);
 

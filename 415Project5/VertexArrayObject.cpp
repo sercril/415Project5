@@ -32,13 +32,14 @@ VertexArrayObject::VertexArrayObject(string objectFile, GLuint program)
 	this->verticies = thisObj.importedVerticies;
 	this->index_data = thisObj.importedIndexData;
 
+	this->program = program;
+
 	this->GetData();
 
-	this->matrix_loc = glGetUniformLocation(program, "Matrix");
-	this->vertposition_loc = glGetAttribLocation(program, "vertexPosition");
-	this->vertcolor_loc = glGetAttribLocation(program, "vertexColor");
-	this->vertex_UV = glGetAttribLocation(program, "vertexUV");
-	this->normal_loc = glGetAttribLocation(program, "vertexNormal");
+	this->matrix_loc = glGetUniformLocation(this->program, "Matrix");
+	this->vertposition_loc = glGetAttribLocation(this->program, "vertexPosition");
+	this->vertex_UV = glGetAttribLocation(this->program, "vertexUV");
+	this->normal_loc = glGetAttribLocation(this->program, "vertexNormal");
 
 	/*** VERTEX ARRAY OBJECT SETUP***/
 	// Create/Generate the Vertex Array Object

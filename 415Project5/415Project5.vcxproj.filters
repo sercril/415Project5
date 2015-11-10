@@ -65,5 +65,11 @@
       <Filter>Resource Files</Filter>
     </None>
     <None Include="packages.config" />
+    <None Include="dirt.ppm">
+      <Filter>Resource Files</Filter>
+    </None>
+    <None Include="moonmap.ppm">
+      <Filter>Resource Files</Filter>
+    </None>
   </ItemGroup>
 </Project>

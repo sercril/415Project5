@@ -23,12 +23,14 @@ SceneObject::SceneObject(string objectFile, float length, float width, float dep
 	this->width = width;
 	this->depth = depth;
 
-	this->Init();
+	
 
 	this->scale = gmtl::makeScale<gmtl::Matrix44f>(gmtl::Vec3f(this->length, this->width, this->depth));
 	this->scale.setState(gmtl::Matrix44f::AFFINE);
 
 	this->VAO = VertexArrayObject(objectFile, program);
+
+	this->Init();
 
 }
 
@@ -37,12 +39,12 @@ SceneObject::SceneObject(string objectFile, float radius, GLuint program)
 
 	this->radius = radius;
 
-	this->Init();
-
 	this->scale = gmtl::makeScale<gmtl::Matrix44f>(gmtl::Vec3f(this->radius, this->radius, this->radius));
 	this->scale.setState(gmtl::Matrix44f::AFFINE);
 
 	this->VAO = VertexArrayObject(objectFile, program);
+
+	this->Init();
 
 }
 
@@ -57,16 +59,15 @@ void SceneObject::Init()
 	gmtl::identity(this->translation);
 	this->rotation = gmtl::Quatf(0.0f, 0.0f, 0.0f, 1.0f);
 
-	this->specCoefficient_loc = glGetUniformLocation(this->VAO.program, "specCoefficient");
-	this->shine_loc = glGetUniformLocation(this->VAO.program, "shine");
+
 	this->upVector_loc = glGetUniformLocation(this->VAO.program, "upVector");
+	this->specCoefficient_loc = glGetUniformLocation(this->VAO.program, "specCoefficient");
+	this->shine_loc = glGetUniformLocation(this->VAO.program, "shine");	
 	this->modelview_loc = glGetUniformLocation(this->VAO.program, "modelview");
 
 	this->specCoefficient = 0.2f;
 	this->shine = 0.1f;
 
-	glUniform1f(this->specCoefficient_loc, this->specCoefficient);
-	glUniform1f(this->shine_loc, this->shine);
 
 }
 
@@ -83,11 +84,14 @@ void SceneObject::Draw(gmtl::Matrix44f viewMatrix, gmtl::Matrix44f projection)
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 
-	glBindVertexArray(this->VAO.vertexArray);
+	
 	glUniformMatrix4fv(this->VAO.matrix_loc, 1, GL_FALSE, &render[0][0]);
 
-	glUniform4f(this->upVector_loc, viewMatrix[1][0], viewMatrix[1][1], viewMatrix[1][2], 0);
-	glUniformMatrix4fv(modelview_loc, 1, GL_FALSE, &newMV[0][0]);
+
+	glUniform3f(this->upVector_loc, viewMatrix[1][0], viewMatrix[1][1], viewMatrix[1][2]);
+	glUniformMatrix4fv(this->modelview_loc, 1, GL_FALSE, &newMV[0][0]);
+	glUniform1f(this->specCoefficient_loc, this->specCoefficient);
+	glUniform1f(this->shine_loc, this->shine);
 
 	// Draw the transformed cuboid
 	glEnable(GL_PRIMITIVE_RESTART);

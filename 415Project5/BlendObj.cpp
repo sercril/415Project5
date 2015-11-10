@@ -40,7 +40,11 @@ BlendObj::BlendObj(string filename)
 			else if (flag == "f")
 			{
 				in >> vert;
-				this->LoadVertex(this->SplitFace(vert));				
+				this->LoadVertex(this->SplitFace(vert));
+				in >> vert;
+				this->LoadVertex(this->SplitFace(vert));
+				in >> vert;
+				this->LoadVertex(this->SplitFace(vert));
 			}
 
 		}
