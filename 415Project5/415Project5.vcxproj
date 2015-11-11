@@ -86,9 +86,10 @@
   <ItemGroup>
     <None Include="Cube_Fragment_Shader.frag" />
     <None Include="Cube_Vertex_Shader.vert" />
-    <None Include="dirt.ppm" />
-    <None Include="moonmap.ppm" />
     <None Include="packages.config" />
+    <None Include="textures\carpet.ppm" />
+    <None Include="textures\dirt.ppm" />
+    <None Include="textures\moonmap.ppm" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

@@ -1,15 +1,3 @@
-#include <stdio.h>
-#include <stdlib.h>
-#include <math.h>
-#include <map>
-
-#include <GL/glew.h>
-#include <GL/freeglut.h>
-
-#include <gmtl\gmtl.h>
-#include <gmtl\Matrix.h>
-
-
 #include "VertexArrayObject.h"
 
 using namespace std;
@@ -140,9 +128,7 @@ void VertexArrayObject::GenerateSmoothNormals()
 
 	for (std::vector<Vertex>::iterator it = this->verticies.begin(); it < verticies.end(); ++it)
 	{
-		(*it).normal = gmtl::makeNormal(pos2norm[(*it).position]);		
-
-		cout << (*it).normal << endl;
+		(*it).normal = gmtl::makeNormal(pos2norm[(*it).position]);
 
 		newNormals.push_back((*it).normal[0]);
 		newNormals.push_back((*it).normal[1]);

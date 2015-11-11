@@ -1,13 +1,3 @@
-#include <stdio.h>
-#include <stdlib.h>
-#include <math.h>
-
-#include <GL/glew.h>
-#include <GL/freeglut.h>
-
-#include <gmtl\gmtl.h>
-#include <gmtl\Matrix.h>
-
 #include "SceneObject.h"
 
 using namespace std;
@@ -57,6 +47,7 @@ SceneObject::~SceneObject()
 void SceneObject::Init()
 {
 	gmtl::identity(this->translation);
+	gmtl::identity(this->transform);
 	this->rotation = gmtl::Quatf(0.0f, 0.0f, 0.0f, 1.0f);
 
 
@@ -65,17 +56,18 @@ void SceneObject::Init()
 	this->shine_loc = glGetUniformLocation(this->VAO.program, "shine");	
 	this->modelview_loc = glGetUniformLocation(this->VAO.program, "modelview");
 
-	this->specCoefficient = 0.2f;
-	this->shine = 0.1f;
+	this->specCoefficient = 0.1f;
+	this->shine = 0.5f;
 
 
 }
 
 void SceneObject::Draw(gmtl::Matrix44f viewMatrix, gmtl::Matrix44f projection)
 {
-	gmtl::Matrix44f rotation = gmtl::makeTrans<gmtl::Matrix44f>(gmtl::Vec3f(this->rotation[0], this->rotation[1], this->rotation[2]));
+	gmtl::Matrix44f rotation = gmtl::makeRot<gmtl::Matrix44f>(gmtl::EulerAngleXYZf(this->rotation[0], this->rotation[1], this->rotation[2]));
 	gmtl::Matrix44f newMV = viewMatrix * rotation * this->translation * this->scale;
 	gmtl::Matrix44f render = projection * newMV;
+
 
 	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, this->texture.textureHeight, this->texture.textureWidth, 0, GL_RGB, GL_UNSIGNED_BYTE, this->texture.imageData);
 
@@ -116,10 +108,10 @@ void SceneObject::SetTexture(Texture t)
 
 void SceneObject::SetTranslation(gmtl::Matrix44f t)
 {
-	this->translation = t;
+	this->translation = this->translation * t;
 }
 
 void SceneObject::SetRotation(gmtl::Quatf r)
 {
-	this->rotation = r;
+	this->rotation = this->rotation * r;
 }

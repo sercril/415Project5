@@ -148,8 +148,8 @@ Texture LoadTexture(char* filename)
 void buildGraph()
 {
 	
-	SceneObject* ball = new SceneObject("OBJs/sphere.obj", ballRadius, program);
-	SceneObject* floor = new SceneObject("OBJs/cube.obj", ballRadius * 10, 1.0f, ballRadius * 10, program);
+	SceneObject* ball = new SceneObject("OBJs/smoothSphere.obj", ballRadius, program);
+	SceneObject* floor = new SceneObject("OBJs/cube.obj", ballRadius * 10.0f, 1.0f, (ballRadius * 10.0f)*2.0f, program);
 	gmtl::Matrix44f initialTranslation, moveLeft;
 	gmtl::Quatf initialRotation;
 
@@ -162,7 +162,7 @@ void buildGraph()
 	initialTranslation = gmtl::makeTrans<gmtl::Matrix44f>(gmtl::Vec3f(0.0f, 0.0f, -5.0f));
 	initialTranslation.setState(gmtl::Matrix44f::TRANS);
 	ball->SetTranslation(initialTranslation);
-	ball->SetTexture(LoadTexture("moonmap.ppm"));
+	ball->SetTexture(LoadTexture("textures/moonmap.ppm"));
 
 	sceneGraph.push_back(ball);
 
@@ -173,11 +173,10 @@ void buildGraph()
 	initialTranslation = gmtl::makeTrans<gmtl::Matrix44f>(gmtl::Vec3f(0.0f, floorY*-1.0f, 0.0f));
 	initialTranslation.setState(gmtl::Matrix44f::TRANS);
 	//Make it look good
-	moveLeft = gmtl::makeTrans<gmtl::Matrix44f>(gmtl::Vec3f(((ballRadius * 10)*-1.0f) / 2, 0.0f, ((ballRadius * 10)*-1.0f) / 2));
+	moveLeft = gmtl::makeTrans<gmtl::Matrix44f>(gmtl::Vec3f(-20.0f,-5.0f,0.0f));
 	moveLeft.setState(gmtl::Matrix44f::TRANS);
-	initialTranslation = moveLeft * initialTranslation;
-	floor->SetTranslation(initialTranslation);
-	floor->SetTexture(LoadTexture("dirt.ppm"));
+	floor->SetTranslation(moveLeft);
+	floor->SetTexture(LoadTexture("textures/carpet.ppm"));
 
 	sceneGraph.push_back(floor);
 }
@@ -196,6 +195,7 @@ void renderGraph(std::vector<SceneObject*> graph, gmtl::Matrix44f mv)
 				case BALL:
 					graph[i]->SetTranslation(gmtl::makeTrans<gmtl::Matrix44f>(ballDelta));
 					texFlag = ballTexFlag;
+					
 					break; 
 				case FLOOR:
 					texFlag = floorTexFlag;
@@ -473,8 +473,10 @@ void init()
 	cameraZ = gmtl::makeTrans<gmtl::Matrix44f>(gmtl::Vec3f(0.0f,0.0f,cameraZFactor));
 	cameraZ.setState(gmtl::Matrix44f::TRANS);
 	
-	view = cameraZ;
-	gmtl::invert(view);
+	elevation = degreesToRadians(30.0f);
+	azimuth = 0.0f;
+	
+	cameraRotate();
 
 	buildGraph();
 

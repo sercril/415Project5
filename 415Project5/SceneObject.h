@@ -57,7 +57,7 @@ public:
 	void SetTexture(Texture t);
 
 	float length, width, depth, radius, specCoefficient, shine;
-	gmtl::Matrix44f scale, translation;
+	gmtl::Matrix44f scale, translation, transform;
 	gmtl::Quatf rotation;	
 	VertexArrayObject VAO;
 	SceneObject* parent;
