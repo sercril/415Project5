@@ -27,19 +27,7 @@ using namespace std;
 
 #pragma region Structs and Enums
 
-enum CollisionType
-{
-	WALL_C = 0,
-	BALL_C
-};
 
-
-struct Collision
-{
-	SceneObject* obj1;
-	SceneObject* obj2;
-	CollisionType type;	
-};
 
 #pragma endregion
 
@@ -78,7 +66,6 @@ gmtl::Matrix44f view, modelView, viewScale, camera, projection, normalMatrix,
 
 std::vector<SceneObject*> sceneGraph;
 std::vector<Vertex> ballData;
-std::vector<Collision> collisionsList;
 
 gmtl::Point3f lightPosition, lightPoint;
 
@@ -134,6 +121,21 @@ void cameraRotate()
 
 #pragma region Helper Functions
 
+
+bool IsWall(SceneObject* obj)
+{
+	switch (obj->type)
+	{
+	case FRONT_WALL:
+	case BACK_WALL:
+	case LEFT_WALL:
+	case RIGHT_WALL:
+		return true;
+	}
+
+	return false;
+}
+
 // TODO Move this to SceneObject.
 Texture LoadTexture(char* filename)
 {
@@ -151,32 +153,31 @@ SceneObject* AddWall(int i)
 
 	switch (i)
 	{
-		//Front Wall
 		case 0:
 			wall = new SceneObject("OBJs/cube.obj", ballDiameter * 10.0f, ballDiameter+2.0f, 2.0f, program);
 			wall->AddTranslation(gmtl::Vec3f(0.0f, 0.0f, ((ballDiameter * 10.0f)*2.0f) + 2.0f));
+			wall->type = BACK_WALL;
 			break;
 
-		//Back Wall
 		case 1:
 			wall = new SceneObject("OBJs/cube.obj", ballDiameter * 10.0f, ballDiameter + 2.0f, 2.0f, program);
 			wall->AddTranslation(gmtl::Vec3f(0.0f, 0.0f, (-(ballDiameter * 10.0f)*2.0f) - 2.0f));
+			wall->type = FRONT_WALL;
 			break;
 
-		//Left Wall
 		case 2:
 			wall = new SceneObject("OBJs/cube.obj", 2.0f, ballDiameter + 2.0f, (ballDiameter * 10.0f)*2.0f, program);
 			wall->AddTranslation(gmtl::Vec3f((ballDiameter * 10.0f)+ 2.0f, 0.0f, 0.0f));
+			wall->type = RIGHT_WALL;
 			break;
 
-		//Right Wall
 		case 3:
 			wall = new SceneObject("OBJs/cube.obj", 2.0f, ballDiameter + 2.0f, (ballDiameter * 10.0f)*2.0f, program);
 			wall->AddTranslation(gmtl::Vec3f((-(ballDiameter * 10.0f)) - 2.0f, 0.0f, 0.0f));
+			wall->type = LEFT_WALL;
 			break;
 	}
 
-	wall->type = WALL;
 	wall->parent = NULL;
 	wall->children.clear();
 	wall->SetTexture(LoadTexture("textures/dirt.ppm"));
@@ -231,11 +232,36 @@ void buildGraph()
 
 bool IsCollided(SceneObject* obj1, SceneObject* obj2)
 {
-	if (obj1->type == WALL && obj2->type == BALL)
+	gmtl::Vec3f posDiff;
+	float collisionDiff;
+	if (IsWall(obj1) && obj2->type == BALL)
 	{
 		
+		posDiff = obj1->GetPosition() - obj2->GetPosition();
+
+		switch (obj1->type)
+		{
+			case FRONT_WALL:
+			case BACK_WALL:
+				collisionDiff = obj1->depth + obj2->radius;
+				if (abs(posDiff[2]) < collisionDiff)
+				{
+					return true;
+				}
+				break;
+
+			case LEFT_WALL:
+			case RIGHT_WALL:
+				collisionDiff = obj1->length + obj2->radius;
+				if (abs(posDiff[2]) < collisionDiff)
+				{
+					return true;
+				}
+				break;
+		}
+		
 	}
-	else if (obj1->type == BALL && obj2->type == WALL)
+	else if (obj1->type == BALL && IsWall(obj2))
 	{
 
 	}
@@ -244,7 +270,7 @@ bool IsCollided(SceneObject* obj1, SceneObject* obj2)
 
 	}
 
-	return true;
+	return false;
 }
 
 // TODO Combine Traverse and Render somehow
@@ -314,13 +340,18 @@ void renderGraph(std::vector<SceneObject*> graph, gmtl::Matrix44f mv)
 					}
 					break;
 
-				case WALL:
-					if (ballDelta != gmtl::Vec3f(0, 0, 0))
+				default:
+
+					if (IsWall(graph[i]))
 					{
-						cout << "WALL " << j << ": " << sceneGraph[0]->GetPosition() - graph[i]->GetPosition() << endl;
+						if (ballDelta != gmtl::Vec3f(0, 0, 0))
+						{
+							cout << "WALL " << j << ": " << sceneGraph[0]->GetPosition() - graph[i]->GetPosition() << endl;
+						}
+
+						++j;
 					}
 					
-					++j;
 					break;
 			}
 			glBindVertexArray(graph[i]->VAO.vertexArray);

@@ -22,7 +22,11 @@ enum ObjectType
 {
 	FLOOR = 0,
 	BALL,
-	WALL
+	LEFT_WALL,
+	RIGHT_WALL,
+	FRONT_WALL,
+	BACK_WALL
+
 };
 
 struct Texture
