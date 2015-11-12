@@ -7,6 +7,7 @@
 #include <sstream>
 #include <fstream>
 #include <stack>
+#include <functional>
 
 #include <GL/glew.h>
 #include <GL/freeglut.h>
@@ -26,18 +27,19 @@ using namespace std;
 
 #pragma region Structs and Enums
 
-
-
-struct Keyframe
+enum CollisionType
 {
-	unsigned long time; // Timestamp, milliseconds since first record. Assume nondecreasing order.
-	float palm_p[3];    // palm position w.r.t. world (x, y, z)
-	float palm_q[4];    // palm orientation w.r.t. world, quaternion (a, b, c, s) a.k.a. (x, y, z, w)
-	float joint[16];    // finger joint angles (in radians). See list above.
-	float ball_p[3];    // ball position
-	float ball_q[4];    // ball orientation
+	WALL_C = 0,
+	BALL_C
 };
 
+
+struct Collision
+{
+	SceneObject* obj1;
+	SceneObject* obj2;
+	CollisionType type;	
+};
 
 #pragma endregion
 
@@ -52,13 +54,12 @@ int mouseX, mouseY,
 mouseDeltaX, mouseDeltaY,
 ambientFlag, diffuseFlag, specFlag, texFlag, floorTexFlag, ballTexFlag;
 
-bool genSmoothNorms, genSplitNorms;
+bool outTrans;
 
-float azimuth, elevation, ballRadius, floorY, cameraZFactor,
+float azimuth, elevation, ballRadius, ballDiameter, floorY, cameraZFactor,
 		nearValue, farValue, leftValue, rightValue, topValue, bottomValue,
 		ballSpec, ballShine, floorSpec, floorShine;
 
-struct Keyframe c;
 
 GLuint program, Matrix_loc, vertposition_loc, normal_loc, modelview_loc,
 		lightPosition_loc, specCoefficient_loc, upVector_loc, 
@@ -76,15 +77,14 @@ gmtl::Matrix44f view, modelView, viewScale, camera, projection, normalMatrix,
 
 
 std::vector<SceneObject*> sceneGraph;
-std::vector<GLfloat> ball_vertex_data, ball_normal_data, ball_uv_data;
-std::vector<GLushort> ball_index_data;
-std::vector<Keyframe> keyframes;
-
 std::vector<Vertex> ballData;
+std::vector<Collision> collisionsList;
 
 gmtl::Point3f lightPosition, lightPoint;
 
 gmtl::Vec3f ballDelta;
+
+
 
 #pragma endregion
 
@@ -134,7 +134,7 @@ void cameraRotate()
 
 #pragma region Helper Functions
 
-
+// TODO Move this to SceneObject.
 Texture LoadTexture(char* filename)
 {
 	unsigned int textureWidth, textureHeight;
@@ -144,13 +144,55 @@ Texture LoadTexture(char* filename)
 	return Texture(textureWidth, textureHeight, imageData);
 }
 
+// TODO Generalize this.
+SceneObject* AddWall(int i)
+{
+	SceneObject* wall = new SceneObject();
+
+	switch (i)
+	{
+		//Front Wall
+		case 0:
+			wall = new SceneObject("OBJs/cube.obj", ballDiameter * 10.0f, ballDiameter+2.0f, 2.0f, program);
+			wall->AddTranslation(gmtl::Vec3f(0.0f, 0.0f, ((ballDiameter * 10.0f)*2.0f) + 2.0f));
+			break;
+
+		//Back Wall
+		case 1:
+			wall = new SceneObject("OBJs/cube.obj", ballDiameter * 10.0f, ballDiameter + 2.0f, 2.0f, program);
+			wall->AddTranslation(gmtl::Vec3f(0.0f, 0.0f, (-(ballDiameter * 10.0f)*2.0f) - 2.0f));
+			break;
+
+		//Left Wall
+		case 2:
+			wall = new SceneObject("OBJs/cube.obj", 2.0f, ballDiameter + 2.0f, (ballDiameter * 10.0f)*2.0f, program);
+			wall->AddTranslation(gmtl::Vec3f((ballDiameter * 10.0f)+ 2.0f, 0.0f, 0.0f));
+			break;
+
+		//Right Wall
+		case 3:
+			wall = new SceneObject("OBJs/cube.obj", 2.0f, ballDiameter + 2.0f, (ballDiameter * 10.0f)*2.0f, program);
+			wall->AddTranslation(gmtl::Vec3f((-(ballDiameter * 10.0f)) - 2.0f, 0.0f, 0.0f));
+			break;
+	}
+
+	wall->type = WALL;
+	wall->parent = NULL;
+	wall->children.clear();
+	wall->SetTexture(LoadTexture("textures/dirt.ppm"));
+	wall->AddTranslation(gmtl::Vec3f(0.0f, 9.0f, 0.0f));
+
+
+
+	return wall;
+}
 
 void buildGraph()
 {
 	
 	SceneObject* ball = new SceneObject("OBJs/smoothSphere.obj", ballRadius, program);
-	SceneObject* floor = new SceneObject("OBJs/cube.obj", ballRadius * 10.0f, 1.0f, (ballRadius * 10.0f)*2.0f, program);
-	gmtl::Matrix44f initialTranslation, moveLeft;
+	SceneObject* floor = new SceneObject("OBJs/cube.obj", ballDiameter * 10.0f, 1.0f, (ballDiameter * 10.0f)*2.0f, program);
+	gmtl::Matrix44f initialTranslation;
 	gmtl::Quatf initialRotation;
 
 		
@@ -159,9 +201,9 @@ void buildGraph()
 	ball->parent = NULL; 
 	ball->children.clear();
 
-	initialTranslation = gmtl::makeTrans<gmtl::Matrix44f>(gmtl::Vec3f(0.0f, 0.0f, -5.0f));
+	initialTranslation = gmtl::makeTrans<gmtl::Matrix44f>(gmtl::Vec3f(0.0f, ballRadius, 0.0f));
 	initialTranslation.setState(gmtl::Matrix44f::TRANS);
-	ball->SetTranslation(initialTranslation);
+	ball->AddTranslation(initialTranslation);
 	ball->SetTexture(LoadTexture("textures/moonmap.ppm"));
 
 	sceneGraph.push_back(ball);
@@ -170,19 +212,91 @@ void buildGraph()
 	floor->type = FLOOR;
 	floor->parent = NULL;
 	floor->children.clear();
-	initialTranslation = gmtl::makeTrans<gmtl::Matrix44f>(gmtl::Vec3f(0.0f, floorY*-1.0f, 0.0f));
+	initialTranslation = gmtl::makeTrans<gmtl::Matrix44f>(gmtl::Vec3f(0.0f,-1.0f,0.0f));
 	initialTranslation.setState(gmtl::Matrix44f::TRANS);
-	//Make it look good
-	moveLeft = gmtl::makeTrans<gmtl::Matrix44f>(gmtl::Vec3f(-20.0f,-5.0f,0.0f));
-	moveLeft.setState(gmtl::Matrix44f::TRANS);
-	floor->SetTranslation(moveLeft);
+	//floor->AddTranslation(initialTranslation);
 	floor->SetTexture(LoadTexture("textures/carpet.ppm"));
 
 	sceneGraph.push_back(floor);
+
+	for (int i = 0; i < 4; ++i)
+	{
+
+		sceneGraph.push_back(AddWall(i));
+	}
+
+	
+}
+
+
+bool IsCollided(SceneObject* obj1, SceneObject* obj2)
+{
+	if (obj1->type == WALL && obj2->type == BALL)
+	{
+		
+	}
+	else if (obj1->type == BALL && obj2->type == WALL)
+	{
+
+	}
+	else if (obj1->type == BALL && obj2->type == BALL)
+	{
+
+	}
+
+	return true;
+}
+
+// TODO Combine Traverse and Render somehow
+/*void traverseGraph(std::vector<SceneObject*> graph)
+{
+	if (!graph.empty())
+	{
+		for (int i = 0; i < graph.size(); ++i)
+		{
+			if (!graph[i]->children.empty())
+			{
+				for (std::vector<SceneObject *>::iterator it = graph[i]->children.begin();
+					it < graph[i]->children.end();
+					++it)
+				{
+					traverseGraph((*it)->children);
+				}
+			}
+
+
+
+		}
+	}
+} */
+
+
+void HandleCollisions()
+{
+	SceneObject* checkObj;
+
+
+	for (std::vector<SceneObject*>::iterator it = sceneGraph.begin(); it < sceneGraph.end(); ++it)
+	{
+		checkObj = (*it);
+		for (std::vector<SceneObject*>::iterator innerIt = sceneGraph.begin(); innerIt < sceneGraph.end(); ++innerIt)
+		{
+			if (checkObj != (*it))
+			{
+				if (IsCollided(checkObj, (*it)))
+				{
+					
+				}
+			}
+		}
+
+	}
 }
 
 void renderGraph(std::vector<SceneObject*> graph, gmtl::Matrix44f mv)
 {
+	int j = 0;
+	
 	if(!graph.empty())
 	{
 		for (int i = 0; i < graph.size(); ++i)
@@ -193,12 +307,20 @@ void renderGraph(std::vector<SceneObject*> graph, gmtl::Matrix44f mv)
 			switch (graph[i]->type)
 			{
 				case BALL:
-					graph[i]->SetTranslation(gmtl::makeTrans<gmtl::Matrix44f>(ballDelta));
-					texFlag = ballTexFlag;
+					graph[i]->AddTranslation(gmtl::makeTrans<gmtl::Matrix44f>(ballDelta));
+					if (outTrans)
+					{
+						cout << graph[i]->GetPosition() << endl;
+					}
+					break;
+
+				case WALL:
+					if (ballDelta != gmtl::Vec3f(0, 0, 0))
+					{
+						cout << "WALL " << j << ": " << sceneGraph[0]->GetPosition() - graph[i]->GetPosition() << endl;
+					}
 					
-					break; 
-				case FLOOR:
-					texFlag = floorTexFlag;
+					++j;
 					break;
 			}
 			glBindVertexArray(graph[i]->VAO.vertexArray);
@@ -267,33 +389,7 @@ void keyboard(unsigned char key, int x, int y)
 	switch (key) 
 	{
 
-		case 'n':
-			genSmoothNorms = true;
-			break;
-
-		case 'N':
-			genSplitNorms = true;
-			break;
-
-		case 'i':
-			ambientFlag = (ambientFlag == 1) ? 0 : 1;
-			break;
-
-		case 'o':
-			diffuseFlag = (diffuseFlag == 1) ? 0 : 1;
-			break;
-
-		case 'p':
-			specFlag = (specFlag == 1) ? 0 : 1;
-			break;
-
-		case 't':
-			ballTexFlag = (ballTexFlag == 1) ? 0 : 1;
-			break;	
-
-		case 'T':
-			floorTexFlag = (floorTexFlag == 1) ? 0 : 1;
-			break;
+		
 
 		case 'w':
 			ballDelta = gmtl::Vec3f(0, 1.0f, 0);
@@ -314,33 +410,11 @@ void keyboard(unsigned char key, int x, int y)
 			ballDelta = gmtl::Vec3f(0, 0, 1.0f);
 			break;
 
+		case 'p':
+			outTrans = true;
+		
+			break;
 
-		case 'h':
-			ballSpec += 0.01f;
-			break;
-		case 'H':
-			ballSpec -= 0.01f;
-			break;
-		case 'j':
-			ballShine += 0.01f;
-			break;
-		case 'J':
-			ballShine -= 0.01f;
-			ballShine = max(0.0f, floorShine);
-			break;
-		case 'k':
-			floorSpec += 0.01f;
-			break;
-		case 'K':
-			floorSpec -= 0.01f;
-			break;
-		case 'l':
-			floorShine += 0.01f;
-			break;
-		case 'L':
-			floorShine -= 0.01f;
-			floorShine = max(0.0f,floorShine);
-			break;
 
 		case 'Z':
 			cameraZFactor += 10.f;
@@ -393,9 +467,9 @@ void display()
 
 void idle()
 {
-	ballDelta = gmtl::Vec3f(0,0,0);
-	genSmoothNorms = false;
-	genSplitNorms = false;
+	ballDelta = gmtl::Vec3f(0, 0, 0);
+
+	outTrans = false;
 }
 
 void init()
@@ -403,7 +477,8 @@ void init()
 
 	elevation = azimuth = 0;
 	ballRadius = floorY = 4.0f;
-	genSmoothNorms = genSplitNorms = false;
+	ballDiameter = ballRadius * 2.0f;
+	outTrans = false;
 
 	ballShine = floorShine = 0.1f;
 	ballSpec = floorSpec = 0.2f;
@@ -445,7 +520,7 @@ void init()
 	gmtl::identity(modelView);
 	gmtl::identity(viewRotation);
 
-	lightPosition.set(0.0f, 10.0f, 0.0f);
+	lightPosition.set(0.0f, 20.0f, 0.0f);
 
 	nearValue = 1.0f;
 	farValue = 1000.0f;
@@ -468,7 +543,7 @@ void init()
 		0.0f,0.0f,-1.0f,0.0f		
 		);
 
-	cameraZFactor = 60.f;
+	cameraZFactor = 350.0f;
 
 	cameraZ = gmtl::makeTrans<gmtl::Matrix44f>(gmtl::Vec3f(0.0f,0.0f,cameraZFactor));
 	cameraZ.setState(gmtl::Matrix44f::TRANS);

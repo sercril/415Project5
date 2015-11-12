@@ -21,7 +21,8 @@ using namespace std;
 enum ObjectType
 {
 	FLOOR = 0,
-	BALL
+	BALL,
+	WALL
 };
 
 struct Texture
@@ -52,9 +53,12 @@ public:
 
 	void Draw(gmtl::Matrix44f viewMatrix, gmtl::Matrix44f projection);
 
-	void SetTranslation(gmtl::Matrix44f t);
-	void SetRotation(gmtl::Quatf r);
+	void AddTranslation(gmtl::Matrix44f t);
+	void AddTranslation(gmtl::Vec3f t);
+	void AddRotation(gmtl::Quatf r);
 	void SetTexture(Texture t);
+
+	gmtl::Vec3f GetPosition();
 
 	float length, width, depth, radius, specCoefficient, shine;
 	gmtl::Matrix44f scale, translation, transform;

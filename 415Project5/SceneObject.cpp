@@ -65,8 +65,8 @@ void SceneObject::Init()
 void SceneObject::Draw(gmtl::Matrix44f viewMatrix, gmtl::Matrix44f projection)
 {
 	gmtl::Matrix44f rotation = gmtl::makeRot<gmtl::Matrix44f>(gmtl::EulerAngleXYZf(this->rotation[0], this->rotation[1], this->rotation[2]));
-	gmtl::Matrix44f newMV = viewMatrix * rotation * this->translation * this->scale;
-	gmtl::Matrix44f render = projection * newMV;
+	gmtl::Matrix44f newMV = viewMatrix * rotation * this->translation;
+	gmtl::Matrix44f render = projection * newMV * this->scale;
 
 
 	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, this->texture.textureHeight, this->texture.textureWidth, 0, GL_RGB, GL_UNSIGNED_BYTE, this->texture.imageData);
@@ -106,12 +106,22 @@ void SceneObject::SetTexture(Texture t)
 	this->texture = t;
 }
 
-void SceneObject::SetTranslation(gmtl::Matrix44f t)
+void SceneObject::AddTranslation(gmtl::Matrix44f t)
 {
-	this->translation = this->translation * t;
+	this->translation *=  t;
 }
 
-void SceneObject::SetRotation(gmtl::Quatf r)
+void SceneObject::AddTranslation(gmtl::Vec3f t)
 {
-	this->rotation = this->rotation * r;
+	this->translation *= gmtl::makeTrans<gmtl::Matrix44f>(t);
+}
+
+void SceneObject::AddRotation(gmtl::Quatf r)
+{
+	this->rotation *= r;
+}
+
+gmtl::Vec3f SceneObject::GetPosition()
+{
+	return gmtl::Vec3f(float(this->translation[0][3]), float(this->translation[1][3]), float(this->translation[2][3]));
 }
