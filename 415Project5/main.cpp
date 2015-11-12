@@ -202,7 +202,7 @@ void buildGraph()
 	ball->parent = NULL; 
 	ball->children.clear();
 
-	initialTranslation = gmtl::makeTrans<gmtl::Matrix44f>(gmtl::Vec3f(0.0f, ballRadius, 0.0f));
+	initialTranslation = gmtl::makeTrans<gmtl::Matrix44f>(gmtl::Vec3f(0.0f, ballRadius+1.0f, 0.0f));
 	initialTranslation.setState(gmtl::Matrix44f::TRANS);
 	ball->AddTranslation(initialTranslation);
 	ball->SetTexture(LoadTexture("textures/moonmap.ppm"));
@@ -234,11 +234,11 @@ bool IsCollided(SceneObject* obj1, SceneObject* obj2)
 {
 	gmtl::Vec3f posDiff;
 	float collisionDiff;
+
+	posDiff = obj1->GetPosition() - obj2->GetPosition();
+
 	if (IsWall(obj1) && obj2->type == BALL)
 	{
-		
-		posDiff = obj1->GetPosition() - obj2->GetPosition();
-
 		switch (obj1->type)
 		{
 			case FRONT_WALL:
@@ -253,7 +253,7 @@ bool IsCollided(SceneObject* obj1, SceneObject* obj2)
 			case LEFT_WALL:
 			case RIGHT_WALL:
 				collisionDiff = obj1->length + obj2->radius;
-				if (abs(posDiff[2]) < collisionDiff)
+				if (abs(posDiff[0]) < collisionDiff)
 				{
 					return true;
 				}
@@ -263,6 +263,26 @@ bool IsCollided(SceneObject* obj1, SceneObject* obj2)
 	}
 	else if (obj1->type == BALL && IsWall(obj2))
 	{
+		switch (obj2->type)
+		{
+		case FRONT_WALL:
+		case BACK_WALL:
+			collisionDiff = obj2->depth + obj1->radius;
+			if (abs(posDiff[2]) < collisionDiff)
+			{
+				return true;
+			}
+			break;
+
+		case LEFT_WALL:
+		case RIGHT_WALL:
+			collisionDiff = obj2->length + obj1->radius;
+			if (abs(posDiff[0]) < collisionDiff)
+			{
+				return true;
+			}
+			break;
+		}
 
 	}
 	else if (obj1->type == BALL && obj2->type == BALL)
@@ -307,9 +327,9 @@ void HandleCollisions()
 		checkObj = (*it);
 		for (std::vector<SceneObject*>::iterator innerIt = sceneGraph.begin(); innerIt < sceneGraph.end(); ++innerIt)
 		{
-			if (checkObj != (*it))
+			if (checkObj != (*innerIt) && !IsWall(checkObj))
 			{
-				if (IsCollided(checkObj, (*it)))
+				if (IsCollided(checkObj, (*innerIt)))
 				{
 					
 				}
@@ -328,7 +348,6 @@ void renderGraph(std::vector<SceneObject*> graph, gmtl::Matrix44f mv)
 		for (int i = 0; i < graph.size(); ++i)
 		{
 			
-			//Should all be graph[i]->draw();
 
 			switch (graph[i]->type)
 			{
@@ -344,12 +363,12 @@ void renderGraph(std::vector<SceneObject*> graph, gmtl::Matrix44f mv)
 
 					if (IsWall(graph[i]))
 					{
-						if (ballDelta != gmtl::Vec3f(0, 0, 0))
+						/*if (ballDelta != gmtl::Vec3f(0, 0, 0))
 						{
 							cout << "WALL " << j << ": " << sceneGraph[0]->GetPosition() - graph[i]->GetPosition() << endl;
 						}
 
-						++j;
+						++j;*/
 					}
 					
 					break;
@@ -499,7 +518,7 @@ void display()
 void idle()
 {
 	ballDelta = gmtl::Vec3f(0, 0, 0);
-
+	HandleCollisions();
 	outTrans = false;
 }
 
