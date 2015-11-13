@@ -37,6 +37,7 @@ using namespace std;
 #define SCREEN_HEIGHT 1080.0f
 #define NUM_OBJECTS 2
 #define INDECIES 10000
+#define ZERO_VECTOR gmtl::Vec3f(0,0,0);
 
 int mouseX, mouseY,
 mouseDeltaX, mouseDeltaY,
@@ -46,7 +47,8 @@ bool outTrans;
 
 float azimuth, elevation, ballRadius, ballDiameter, floorY, cameraZFactor,
 		nearValue, farValue, leftValue, rightValue, topValue, bottomValue,
-		ballSpec, ballShine, floorSpec, floorShine;
+		ballSpec, ballShine, floorSpec, floorShine,
+		drag, restitution;
 
 
 GLuint program, Matrix_loc, vertposition_loc, normal_loc, modelview_loc,
@@ -192,22 +194,42 @@ void buildGraph()
 {
 	
 	SceneObject* ball = new SceneObject("OBJs/smoothSphere.obj", ballRadius, program);
+	SceneObject* ball2 = new SceneObject("OBJs/smoothSphere.obj", ballRadius, program);
 	SceneObject* floor = new SceneObject("OBJs/cube.obj", ballDiameter * 10.0f, 1.0f, (ballDiameter * 10.0f)*2.0f, program);
 	gmtl::Matrix44f initialTranslation;
 	gmtl::Quatf initialRotation;
 
 		
-	//Ball
+	//Ball 2
 	ball->type = BALL;
 	ball->parent = NULL; 
 	ball->children.clear();
 
-	initialTranslation = gmtl::makeTrans<gmtl::Matrix44f>(gmtl::Vec3f(0.0f, ballRadius+1.0f, 0.0f));
+	initialTranslation = gmtl::makeTrans<gmtl::Matrix44f>(gmtl::Vec3f(0.0f, ballRadius+1.0f, 100.0f));
 	initialTranslation.setState(gmtl::Matrix44f::TRANS);
 	ball->AddTranslation(initialTranslation);
 	ball->SetTexture(LoadTexture("textures/moonmap.ppm"));
 
+	ball->velocity = gmtl::Vec3f(0.0f, 0, -2.0f);
+	//ball->velocity = ZERO_VECTOR;
+	ball->acceleration = ZERO_VECTOR;
+
 	sceneGraph.push_back(ball);
+
+	//Ball 2
+	ball2->type = BALL;
+	ball2->parent = NULL;
+	ball2->children.clear();
+	initialTranslation = gmtl::makeTrans<gmtl::Matrix44f>(gmtl::Vec3f(0.0f, ballRadius + 1.0f, -100.0f));
+	initialTranslation.setState(gmtl::Matrix44f::TRANS);
+	ball2->AddTranslation(initialTranslation);
+	ball2->SetTexture(LoadTexture("textures/moonmap.ppm"));
+
+	ball2->velocity = gmtl::Vec3f(0.0f, 0, 3.0f);
+	//ball2->velocity = ZERO_VECTOR;
+	ball2->acceleration = ZERO_VECTOR;
+
+	sceneGraph.push_back(ball2);
 
 	//Floor
 	floor->type = FLOOR;
@@ -235,7 +257,7 @@ bool IsCollided(SceneObject* obj1, SceneObject* obj2)
 	gmtl::Vec3f posDiff;
 	float collisionDiff;
 
-	posDiff = obj1->GetPosition() - obj2->GetPosition();
+	posDiff = obj2->GetPosition() - obj1->GetPosition();
 
 	if (IsWall(obj1) && obj2->type == BALL)
 	{
@@ -287,7 +309,10 @@ bool IsCollided(SceneObject* obj1, SceneObject* obj2)
 	}
 	else if (obj1->type == BALL && obj2->type == BALL)
 	{
-
+		if (gmtl::length(posDiff) < obj1->radius + obj2->radius)
+		{
+			return true;
+		}
 	}
 
 	return false;
@@ -320,6 +345,7 @@ bool IsCollided(SceneObject* obj1, SceneObject* obj2)
 void HandleCollisions()
 {
 	SceneObject* checkObj;
+	gmtl::Vec3f collisionNormal, normalRelativeVelocity;
 
 
 	for (std::vector<SceneObject*>::iterator it = sceneGraph.begin(); it < sceneGraph.end(); ++it)
@@ -331,7 +357,42 @@ void HandleCollisions()
 			{
 				if (IsCollided(checkObj, (*innerIt)))
 				{
+					if (IsWall(*innerIt))
+					{
+						collisionNormal = (*innerIt)->GetPosition() - checkObj->GetPosition();
+						collisionNormal = gmtl::makeNormal(collisionNormal);
+					}
+					else
+					{
+						collisionNormal = (*innerIt)->GetPosition() - checkObj->GetPosition();
+						collisionNormal = gmtl::makeNormal(collisionNormal);
+					}
+
 					
+					
+					cout << gmtl::dot((checkObj->velocity - (*innerIt)->velocity), collisionNormal) << endl;
+					if (gmtl::dot((checkObj->velocity - (*innerIt)->velocity), collisionNormal) < 0)
+					{
+						switch ((*innerIt)->type)
+						{
+							case FRONT_WALL:
+							case BACK_WALL:
+								checkObj->velocity = gmtl::Vec3f(checkObj->velocity[0], checkObj->velocity[1], -checkObj->velocity[2]);
+								break;
+
+							case LEFT_WALL:
+							case RIGHT_WALL:
+								checkObj->velocity = gmtl::Vec3f(-checkObj->velocity[0], checkObj->velocity[1], checkObj->velocity[2]);
+								break;
+
+							case BALL:
+								normalRelativeVelocity = gmtl::dot((checkObj->velocity - (*innerIt)->velocity), collisionNormal)*collisionNormal;
+								checkObj->velocity = (checkObj->velocity - ((1 + restitution)*normalRelativeVelocity)) / (1 + (checkObj->mass / (*innerIt)->mass));
+
+								(*innerIt)->velocity = ((*innerIt)->velocity + ((1 + restitution)*normalRelativeVelocity)) / (1 + ((*innerIt)->mass / checkObj->mass));
+								break;
+						}
+					}					
 				}
 			}
 		}
@@ -339,6 +400,17 @@ void HandleCollisions()
 	}
 }
 
+void ApplyForces()
+{
+	gmtl::Vec3f dragForce;
+
+	for (std::vector<SceneObject*>::iterator it = sceneGraph.begin(); it < sceneGraph.end(); ++it)
+	{		
+		dragForce = -drag * (*it)->velocity;
+		(*it)->acceleration = (1 / (*it)->mass) * dragForce;
+		(*it)->Move();
+	}
+}
 void renderGraph(std::vector<SceneObject*> graph, gmtl::Matrix44f mv)
 {
 	int j = 0;
@@ -518,14 +590,22 @@ void display()
 void idle()
 {
 	ballDelta = gmtl::Vec3f(0, 0, 0);
+
+
+	
 	HandleCollisions();
+	ApplyForces();
+
 	outTrans = false;
+	
+
+	glutPostRedisplay();
 }
 
 void init()
 {
 
-	elevation = azimuth = 0;
+	elevation = azimuth = restitution = 0;
 	ballRadius = floorY = 4.0f;
 	ballDiameter = ballRadius * 2.0f;
 	outTrans = false;
@@ -533,6 +613,7 @@ void init()
 	ballShine = floorShine = 0.1f;
 	ballSpec = floorSpec = 0.2f;
 
+	drag = 0.1f;
 
 	// Enable depth test (visible surface determination)
 	glEnable(GL_DEPTH_TEST);

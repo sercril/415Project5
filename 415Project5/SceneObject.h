@@ -56,6 +56,7 @@ public:
 	~SceneObject();
 
 	void Draw(gmtl::Matrix44f viewMatrix, gmtl::Matrix44f projection);
+	void Move();
 
 	void AddTranslation(gmtl::Matrix44f t);
 	void AddTranslation(gmtl::Vec3f t);
@@ -64,9 +65,10 @@ public:
 
 	gmtl::Vec3f GetPosition();
 
-	float length, width, depth, radius, specCoefficient, shine;
+	float length, width, depth, radius, specCoefficient, shine, mass;
 	gmtl::Matrix44f scale, translation, transform;
-	gmtl::Quatf rotation;	
+	gmtl::Quatf rotation;
+	gmtl::Vec3f velocity, acceleration;
 	VertexArrayObject VAO;
 	SceneObject* parent;
 	ObjectType type;

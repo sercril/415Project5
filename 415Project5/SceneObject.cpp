@@ -59,6 +59,10 @@ void SceneObject::Init()
 	this->specCoefficient = 0.1f;
 	this->shine = 0.5f;
 
+	this->mass = 5.0f;
+
+	this->velocity = gmtl::Vec3f(0, 0, 0);
+
 
 }
 
@@ -119,6 +123,12 @@ void SceneObject::AddTranslation(gmtl::Vec3f t)
 void SceneObject::AddRotation(gmtl::Quatf r)
 {
 	this->rotation *= r;
+}
+
+void SceneObject::Move()
+{
+	this->AddTranslation(this->velocity);
+	this->velocity += this->acceleration;
 }
 
 gmtl::Vec3f SceneObject::GetPosition()
