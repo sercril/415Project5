@@ -27,7 +27,17 @@ using namespace std;
 
 #pragma region Structs and Enums
 
+struct Collision
+{
+	SceneObject* a;
+	SceneObject* b;
 
+	Collision(SceneObject* a, SceneObject* b)
+	{
+		this->a = a;
+		this->b = b;
+	}
+};
 
 #pragma endregion
 
@@ -43,12 +53,12 @@ int mouseX, mouseY,
 mouseDeltaX, mouseDeltaY,
 ambientFlag, diffuseFlag, specFlag, texFlag, floorTexFlag, ballTexFlag;
 
-bool outTrans;
+bool hit;
 
 float azimuth, elevation, ballRadius, ballDiameter, floorY, cameraZFactor,
 		nearValue, farValue, leftValue, rightValue, topValue, bottomValue,
 		ballSpec, ballShine, floorSpec, floorShine,
-		drag, restitution;
+		drag, restitution, hitScale;
 
 
 GLuint program, Matrix_loc, vertposition_loc, normal_loc, modelview_loc,
@@ -68,7 +78,7 @@ gmtl::Matrix44f view, modelView, viewScale, camera, projection, normalMatrix,
 
 std::vector<SceneObject*> sceneGraph;
 std::vector<Vertex> ballData;
-
+std::vector<Collision> collsionList;
 gmtl::Point3f lightPosition, lightPoint;
 
 gmtl::Vec3f ballDelta;
@@ -123,7 +133,19 @@ void cameraRotate()
 
 #pragma region Helper Functions
 
-
+int AlreadyCollided(SceneObject* a, SceneObject* b)
+{
+	int i = 0;
+	for (std::vector<Collision>::iterator it = collsionList.begin(); it < collsionList.end(); ++it)
+	{
+		if ((a == it->a && b == it->b) || (a == it->b && b == it->a))
+		{
+			return i;
+		}
+		++i;
+	}
+	return -1;
+}
 bool IsWall(SceneObject* obj)
 {
 	switch (obj->type)
@@ -346,7 +368,7 @@ void HandleCollisions()
 {
 	SceneObject* checkObj;
 	gmtl::Vec3f collisionNormal, normalRelativeVelocity;
-
+	int cIndex;
 
 	for (std::vector<SceneObject*>::iterator it = sceneGraph.begin(); it < sceneGraph.end(); ++it)
 	{
@@ -355,8 +377,11 @@ void HandleCollisions()
 		{
 			if (checkObj != (*innerIt) && !IsWall(checkObj))
 			{
-				if (IsCollided(checkObj, (*innerIt)))
+				cIndex = AlreadyCollided(checkObj, (*innerIt));
+				if (IsCollided(checkObj, (*innerIt)) && cIndex == -1)
 				{
+
+					collsionList.push_back(Collision(checkObj, (*innerIt)));
 					if (IsWall(*innerIt))
 					{
 						collisionNormal = (*innerIt)->GetPosition() - checkObj->GetPosition();
@@ -369,9 +394,7 @@ void HandleCollisions()
 					}
 
 					
-					
-					cout << gmtl::dot((checkObj->velocity - (*innerIt)->velocity), collisionNormal) << endl;
-					if (gmtl::dot((checkObj->velocity - (*innerIt)->velocity), collisionNormal) < 0)
+					if (gmtl::dot((checkObj->velocity - (*innerIt)->velocity), collisionNormal) < 8.0f)
 					{
 						switch ((*innerIt)->type)
 						{
@@ -387,6 +410,7 @@ void HandleCollisions()
 
 							case BALL:
 								normalRelativeVelocity = gmtl::dot((checkObj->velocity - (*innerIt)->velocity), collisionNormal)*collisionNormal;
+
 								checkObj->velocity = (checkObj->velocity - ((1 + restitution)*normalRelativeVelocity)) / (1 + (checkObj->mass / (*innerIt)->mass));
 
 								(*innerIt)->velocity = ((*innerIt)->velocity + ((1 + restitution)*normalRelativeVelocity)) / (1 + ((*innerIt)->mass / checkObj->mass));
@@ -394,26 +418,45 @@ void HandleCollisions()
 						}
 					}					
 				}
+				else if (!IsCollided(checkObj, (*innerIt)) && cIndex > -1)
+				{
+					collsionList.erase(collsionList.begin()+cIndex);
+				}
+
 			}
 		}
 
 	}
 }
-
 void ApplyForces()
 {
 	gmtl::Vec3f dragForce;
+	gmtl::Vec3f hitForce;
 
 	for (std::vector<SceneObject*>::iterator it = sceneGraph.begin(); it < sceneGraph.end(); ++it)
-	{		
-		dragForce = -drag * (*it)->velocity;
-		(*it)->acceleration = (1 / (*it)->mass) * dragForce;
-		(*it)->Move();
+	{	
+		if ((*it)->type == BALL)
+		{
+			hitForce = gmtl::makeNormal(gmtl::Vec3f(-view[2][0], 0, -view[2][2])) * hitScale;
+
+			dragForce = -drag * (*it)->velocity;
+
+			if (hit && it == sceneGraph.begin())
+			{
+				(*it)->acceleration = (1 / (*it)->mass) * (dragForce + hitForce);
+			}
+			else
+			{
+				(*it)->acceleration = (1 / (*it)->mass) * dragForce;
+			}
+
+			(*it)->Move();
+		}
+		
 	}
 }
 void renderGraph(std::vector<SceneObject*> graph, gmtl::Matrix44f mv)
 {
-	int j = 0;
 	
 	if(!graph.empty())
 	{
@@ -421,30 +464,7 @@ void renderGraph(std::vector<SceneObject*> graph, gmtl::Matrix44f mv)
 		{
 			
 
-			switch (graph[i]->type)
-			{
-				case BALL:
-					graph[i]->AddTranslation(gmtl::makeTrans<gmtl::Matrix44f>(ballDelta));
-					if (outTrans)
-					{
-						cout << graph[i]->GetPosition() << endl;
-					}
-					break;
-
-				default:
-
-					if (IsWall(graph[i]))
-					{
-						/*if (ballDelta != gmtl::Vec3f(0, 0, 0))
-						{
-							cout << "WALL " << j << ": " << sceneGraph[0]->GetPosition() - graph[i]->GetPosition() << endl;
-						}
-
-						++j;*/
-					}
-					
-					break;
-			}
+			
 			glBindVertexArray(graph[i]->VAO.vertexArray);
 			// Send a different transformation matrix to the shader
 			
@@ -513,28 +533,8 @@ void keyboard(unsigned char key, int x, int y)
 
 		
 
-		case 'w':
-			ballDelta = gmtl::Vec3f(0, 1.0f, 0);
-			break;
-		case 'a':
-			ballDelta = gmtl::Vec3f(-1.0f, 0, 0);
-			break;
-		case 's':
-			ballDelta = gmtl::Vec3f(0, -1.0f, 0);
-			break;
-		case 'd':
-			ballDelta = gmtl::Vec3f(1.0f, 0, 0);
-			break;
-		case 'q':
-			ballDelta = gmtl::Vec3f(0, 0, -1.0f);
-			break;
-		case 'e':
-			ballDelta = gmtl::Vec3f(0, 0, 1.0f);
-			break;
-
-		case 'p':
-			outTrans = true;
-		
+		case ' ':
+			hit = true;
 			break;
 
 
@@ -574,7 +574,6 @@ void display()
 	// Clear the color and depth buffers
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-	
 	renderGraph(sceneGraph, view);
 	//Ask GL to execute the commands from the buffer
 	glutSwapBuffers();	// *** if you are using GLUT_DOUBLE, use glutSwapBuffers() instead 
@@ -596,7 +595,7 @@ void idle()
 	HandleCollisions();
 	ApplyForces();
 
-	outTrans = false;
+	hit = false;
 	
 
 	glutPostRedisplay();
@@ -608,8 +607,8 @@ void init()
 	elevation = azimuth = restitution = 0;
 	ballRadius = floorY = 4.0f;
 	ballDiameter = ballRadius * 2.0f;
-	outTrans = false;
-
+	hit = false;
+	hitScale = 3.0f;
 	ballShine = floorShine = 0.1f;
 	ballSpec = floorSpec = 0.2f;
 
