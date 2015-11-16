@@ -51,7 +51,7 @@ struct Collision
 
 int mouseX, mouseY,
 mouseDeltaX, mouseDeltaY,
-ambientFlag, diffuseFlag, specFlag, texFlag, floorTexFlag, ballTexFlag;
+ambientFlag, diffuseFlag, specFlag, texFlag, floorTexFlag, ballTexFlag, simStep;
 
 bool hit, c_tableCenter, c_cueFollow, c_cue;
 
@@ -582,6 +582,15 @@ void keyboard(unsigned char key, int x, int y)
 			restitutionWall = max(0.0f, restitutionWall - 0.01f);
 			break;
 
+
+		case 'b': 
+			simStep += 1;
+			break;
+
+		case 'B':
+			simStep = max(simStep - 1,1);
+			break;
+
 		case 'Z':
 			cameraZFactor += 10.f;
 			cameraZ = gmtl::makeTrans<gmtl::Matrix44f>(gmtl::Vec3f(0.0f, 0.0f, cameraZFactor));
@@ -635,7 +644,12 @@ void idle()
 	ballDelta = gmtl::Vec3f(0, 0, 0);
 
 	HandleCollisions();
-	ApplyForces();
+
+	for (int i = 0; i < simStep; ++i)
+	{
+		ApplyForces();
+	}
+	
 
 	hit = false;
 	
@@ -652,10 +666,9 @@ void init()
 	ballDiameter = ballRadius * 2.0f;
 	hit = c_tableCenter = c_cueFollow = c_cue = false;
 	hitScale = 3.0f;
-	ballShine = floorShine = 0.1f;
+	ballShine = floorShine = drag = 0.1f;
 	ballSpec = floorSpec = restitutionBall = restitutionWall = 0.2f;
-
-	drag = 0.1f;
+	simStep = 1;
 
 	// Enable depth test (visible surface determination)
 	glEnable(GL_DEPTH_TEST);
