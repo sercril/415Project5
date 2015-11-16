@@ -230,7 +230,7 @@ void buildGraph()
 	initialTranslation = gmtl::makeTrans<gmtl::Matrix44f>(gmtl::Vec3f(0.0f, ballRadius+1.0f, 100.0f));
 	initialTranslation.setState(gmtl::Matrix44f::TRANS);
 	ball->AddTranslation(initialTranslation);
-	ball->SetTexture(LoadTexture("textures/moonmap.ppm"));
+	ball->SetTexture(LoadTexture("textures/Ball1.ppm"));
 
 	ball->velocity = gmtl::Vec3f(0.0f, 0, -2.0f);
 	//ball->velocity = ZERO_VECTOR;

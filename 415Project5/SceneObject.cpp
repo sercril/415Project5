@@ -12,7 +12,7 @@ SceneObject::SceneObject(string objectFile, float length, float width, float dep
 	this->length = length;
 	this->width = width;
 	this->depth = depth;
-
+	this->radius = 0;
 	
 
 	this->scale = gmtl::makeScale<gmtl::Matrix44f>(gmtl::Vec3f(this->length, this->width, this->depth));
@@ -63,12 +63,11 @@ void SceneObject::Init()
 
 	this->velocity = gmtl::Vec3f(0, 0, 0);
 
-
 }
 
 void SceneObject::Draw(gmtl::Matrix44f viewMatrix, gmtl::Matrix44f projection)
 {
-	gmtl::Matrix44f rotation = gmtl::makeRot<gmtl::Matrix44f>(gmtl::EulerAngleXYZf(this->rotation[0], this->rotation[1], this->rotation[2]));
+	gmtl::Matrix44f rotation = gmtl::make<gmtl::Matrix44f>(this->rotation);
 	gmtl::Matrix44f newMV = viewMatrix * rotation * this->translation;
 	gmtl::Matrix44f render = projection * newMV * this->scale;
 
@@ -127,8 +126,21 @@ void SceneObject::AddRotation(gmtl::Quatf r)
 
 void SceneObject::Move()
 {
+	gmtl::Vec3f currentPos, d;
+	float angle;
+
+	currentPos = this->GetPosition();
 	this->AddTranslation(this->velocity);
 	this->velocity += this->acceleration;
+
+	d = this->GetPosition() - currentPos;
+
+	if (this->radius > 0)
+	{
+		angle = gmtl::length(d) / this->radius;
+		d = gmtl::makeNormal(gmtl::Vec3f(d[2], 0, -d[0])) * angle;
+		this->AddRotation(gmtl::Quatf(d[0], d[1], d[2], angle));
+	}
 }
 
 gmtl::Vec3f SceneObject::GetPosition()
