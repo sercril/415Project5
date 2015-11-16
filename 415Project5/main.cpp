@@ -53,12 +53,12 @@ int mouseX, mouseY,
 mouseDeltaX, mouseDeltaY,
 ambientFlag, diffuseFlag, specFlag, texFlag, floorTexFlag, ballTexFlag;
 
-bool hit;
+bool hit, c_tableCenter, c_cueFollow, c_cue;
 
 float azimuth, elevation, ballRadius, ballDiameter, floorY, cameraZFactor,
 		nearValue, farValue, leftValue, rightValue, topValue, bottomValue,
 		ballSpec, ballShine, floorSpec, floorShine,
-		drag, restitution, hitScale;
+		drag, restitutionBall, restitutionWall, hitScale;
 
 
 GLuint program, Matrix_loc, vertposition_loc, normal_loc, modelview_loc,
@@ -73,7 +73,7 @@ const GLubyte *errString;
 
 
 gmtl::Matrix44f view, modelView, viewScale, camera, projection, normalMatrix,
-				elevationRotation, azimuthRotation, cameraZ, viewRotation;
+				elevationRotation, azimuthRotation, cameraZ, viewRotation, cameraTrans;
 
 
 std::vector<SceneObject*> sceneGraph;
@@ -101,7 +101,6 @@ float degreesToRadians(float deg)
 
 void cameraRotate()
 {
-
 	elevationRotation.set(
 		1, 0, 0, 0,
 		0, cos(elevation * -1), (sin(elevation * -1) * -1), 0,
@@ -117,12 +116,22 @@ void cameraRotate()
 	elevationRotation.setState(gmtl::Matrix44f::ORTHOGONAL);
 
 	azimuthRotation.setState(gmtl::Matrix44f::ORTHOGONAL);
+	
+	if (c_tableCenter)
+	{
+		cameraTrans = gmtl::makeTrans<gmtl::Matrix44f>(gmtl::Vec3f(0, 0, 0));
+	}
+	else if (c_cueFollow)
+	{
+		cameraTrans = gmtl::makeTrans<gmtl::Matrix44f>(sceneGraph[0]->GetPosition());
+	}
+	
 
 
 	viewRotation = azimuthRotation * elevationRotation;
 	gmtl::invert(viewRotation);
 
-	view = azimuthRotation * elevationRotation * cameraZ;
+	view = cameraTrans * azimuthRotation * elevationRotation * cameraZ;
 
 	gmtl::invert(view);
 
@@ -178,25 +187,25 @@ SceneObject* AddWall(int i)
 	switch (i)
 	{
 		case 0:
-			wall = new SceneObject("OBJs/cube.obj", ballDiameter * 10.0f, ballDiameter+2.0f, 2.0f, program);
+			wall = new SceneObject("OBJs/cube.obj", ballDiameter * 10.0f, ballDiameter+2.0f, ballDiameter, program);
 			wall->AddTranslation(gmtl::Vec3f(0.0f, 0.0f, ((ballDiameter * 10.0f)*2.0f) + 2.0f));
 			wall->type = BACK_WALL;
 			break;
 
 		case 1:
-			wall = new SceneObject("OBJs/cube.obj", ballDiameter * 10.0f, ballDiameter + 2.0f, 2.0f, program);
+			wall = new SceneObject("OBJs/cube.obj", ballDiameter * 10.0f, ballDiameter + 2.0f, ballDiameter, program);
 			wall->AddTranslation(gmtl::Vec3f(0.0f, 0.0f, (-(ballDiameter * 10.0f)*2.0f) - 2.0f));
 			wall->type = FRONT_WALL;
 			break;
 
 		case 2:
-			wall = new SceneObject("OBJs/cube.obj", 2.0f, ballDiameter + 2.0f, (ballDiameter * 10.0f)*2.0f, program);
+			wall = new SceneObject("OBJs/cube.obj", ballDiameter, ballDiameter + 2.0f, (ballDiameter * 10.0f)*2.0f, program);
 			wall->AddTranslation(gmtl::Vec3f((ballDiameter * 10.0f)+ 2.0f, 0.0f, 0.0f));
 			wall->type = RIGHT_WALL;
 			break;
 
 		case 3:
-			wall = new SceneObject("OBJs/cube.obj", 2.0f, ballDiameter + 2.0f, (ballDiameter * 10.0f)*2.0f, program);
+			wall = new SceneObject("OBJs/cube.obj", ballDiameter, ballDiameter + 2.0f, (ballDiameter * 10.0f)*2.0f, program);
 			wall->AddTranslation(gmtl::Vec3f((-(ballDiameter * 10.0f)) - 2.0f, 0.0f, 0.0f));
 			wall->type = LEFT_WALL;
 			break;
@@ -380,43 +389,36 @@ void HandleCollisions()
 				cIndex = AlreadyCollided(checkObj, (*innerIt));
 				if (IsCollided(checkObj, (*innerIt)) && cIndex == -1)
 				{
-
 					collsionList.push_back(Collision(checkObj, (*innerIt)));
-					if (IsWall(*innerIt))
-					{
-						collisionNormal = (*innerIt)->GetPosition() - checkObj->GetPosition();
-						collisionNormal = gmtl::makeNormal(collisionNormal);
-					}
-					else
-					{
-						collisionNormal = (*innerIt)->GetPosition() - checkObj->GetPosition();
-						collisionNormal = gmtl::makeNormal(collisionNormal);
-					}
-
 					
-					if (gmtl::dot((checkObj->velocity - (*innerIt)->velocity), collisionNormal) < 8.0f)
+					collisionNormal = checkObj->GetPosition() - (*innerIt)->GetPosition();
+					collisionNormal = gmtl::makeNormal(collisionNormal);
+					collisionNormal[1] = 0.0f;
+
+					cout << "Object V: " << checkObj->velocity << endl << "Other V: " << (*innerIt)->velocity << endl << "Collision Normal: " << collisionNormal << endl;
+					cout << gmtl::dot((checkObj->velocity - (*innerIt)->velocity), collisionNormal) << endl;
+					
+					switch ((*innerIt)->type)
 					{
-						switch ((*innerIt)->type)
-						{
-							case FRONT_WALL:
-							case BACK_WALL:
-								checkObj->velocity = gmtl::Vec3f(checkObj->velocity[0], checkObj->velocity[1], -checkObj->velocity[2]);
-								break;
+						case FRONT_WALL:
+						case BACK_WALL:
+							checkObj->velocity = restitutionWall * gmtl::Vec3f(checkObj->velocity[0], checkObj->velocity[1], -checkObj->velocity[2]);
+							break;
 
-							case LEFT_WALL:
-							case RIGHT_WALL:
-								checkObj->velocity = gmtl::Vec3f(-checkObj->velocity[0], checkObj->velocity[1], checkObj->velocity[2]);
-								break;
+						case LEFT_WALL:
+						case RIGHT_WALL:
+							checkObj->velocity = restitutionWall * gmtl::Vec3f(-checkObj->velocity[0], checkObj->velocity[1], checkObj->velocity[2]);
+							break;
 
-							case BALL:
-								normalRelativeVelocity = gmtl::dot((checkObj->velocity - (*innerIt)->velocity), collisionNormal)*collisionNormal;
+						case BALL:
+							normalRelativeVelocity = gmtl::dot((checkObj->velocity - (*innerIt)->velocity), collisionNormal)*collisionNormal;
 
-								checkObj->velocity = (checkObj->velocity - ((1 + restitution)*normalRelativeVelocity)) / (1 + (checkObj->mass / (*innerIt)->mass));
+							checkObj->velocity = (checkObj->velocity - ((1 + restitutionBall)*normalRelativeVelocity)) / (1 + (checkObj->mass / (*innerIt)->mass));
 
-								(*innerIt)->velocity = ((*innerIt)->velocity + ((1 + restitution)*normalRelativeVelocity)) / (1 + ((*innerIt)->mass / checkObj->mass));
-								break;
-						}
-					}					
+							(*innerIt)->velocity = ((*innerIt)->velocity + ((1 + restitutionBall)*normalRelativeVelocity)) / (1 + ((*innerIt)->mass / checkObj->mass));
+							break;
+					}
+										
 				}
 				else if (!IsCollided(checkObj, (*innerIt)) && cIndex > -1)
 				{
@@ -462,9 +464,7 @@ void renderGraph(std::vector<SceneObject*> graph, gmtl::Matrix44f mv)
 	{
 		for (int i = 0; i < graph.size(); ++i)
 		{
-			
-
-			
+	
 			glBindVertexArray(graph[i]->VAO.vertexArray);
 			// Send a different transformation matrix to the shader
 			
@@ -531,12 +531,56 @@ void keyboard(unsigned char key, int x, int y)
 	switch (key) 
 	{
 
-		
+		case '1':
+			c_tableCenter = true;
+			c_cue = c_cueFollow = false;
+			break;
+			
+		case '2':
+			c_cueFollow = true;
+			c_cue = c_tableCenter = false;
+			break;
+		case '3':
+			cameraTrans = gmtl::makeTrans<gmtl::Matrix44f>(sceneGraph[0]->GetPosition());
+			c_cueFollow = c_tableCenter = false;
+			break;
 
 		case ' ':
 			hit = true;
 			break;
 
+
+		case 'k':
+			drag += 0.01f;
+			break;
+
+		case 'K':
+			drag = max(0.0f,drag - 0.01f);
+			break;
+
+		case 'm':
+			sceneGraph[0]->mass += 1.0f;
+			break;
+
+		case 'M':
+			sceneGraph[0]->mass = max(0.0f, sceneGraph[0]->mass - 1.0f);
+			break;
+
+		case 'j':
+			restitutionBall = min(restitutionBall + 0.01f,1.0f);
+			break;
+
+		case 'J':
+			restitutionBall = max(0.0f, restitutionBall - 0.01f);
+			break;
+
+		case 'n':
+			restitutionWall = min(restitutionWall + 0.01f, 1.0f);
+			break;
+
+		case 'N':
+			restitutionWall = max(0.0f, restitutionWall - 0.01f);
+			break;
 
 		case 'Z':
 			cameraZFactor += 10.f;
@@ -590,13 +634,12 @@ void idle()
 {
 	ballDelta = gmtl::Vec3f(0, 0, 0);
 
-
-	
 	HandleCollisions();
 	ApplyForces();
 
 	hit = false;
 	
+	cameraRotate();
 
 	glutPostRedisplay();
 }
@@ -604,13 +647,13 @@ void idle()
 void init()
 {
 
-	elevation = azimuth = restitution = 0;
+	elevation = azimuth =  0;
 	ballRadius = floorY = 4.0f;
 	ballDiameter = ballRadius * 2.0f;
-	hit = false;
+	hit = c_tableCenter = c_cueFollow = c_cue = false;
 	hitScale = 3.0f;
 	ballShine = floorShine = 0.1f;
-	ballSpec = floorSpec = 0.2f;
+	ballSpec = floorSpec = restitutionBall = restitutionWall = 0.2f;
 
 	drag = 0.1f;
 
@@ -649,6 +692,7 @@ void init()
 	gmtl::identity(view);
 	gmtl::identity(modelView);
 	gmtl::identity(viewRotation);
+	gmtl::identity(cameraTrans);
 
 	lightPosition.set(0.0f, 20.0f, 0.0f);
 

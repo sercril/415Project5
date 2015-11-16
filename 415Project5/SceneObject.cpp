@@ -68,7 +68,7 @@ void SceneObject::Init()
 void SceneObject::Draw(gmtl::Matrix44f viewMatrix, gmtl::Matrix44f projection)
 {
 	gmtl::Matrix44f rotation = gmtl::make<gmtl::Matrix44f>(this->rotation);
-	gmtl::Matrix44f newMV = viewMatrix * rotation * this->translation;
+	gmtl::Matrix44f newMV = viewMatrix * this->translation * rotation;
 	gmtl::Matrix44f render = projection * newMV * this->scale;
 
 
@@ -121,7 +121,7 @@ void SceneObject::AddTranslation(gmtl::Vec3f t)
 
 void SceneObject::AddRotation(gmtl::Quatf r)
 {
-	this->rotation *= r;
+	this->rotation = r * this->rotation;
 }
 
 void SceneObject::Move()
@@ -133,13 +133,14 @@ void SceneObject::Move()
 	this->AddTranslation(this->velocity);
 	this->velocity += this->acceleration;
 
-	d = this->GetPosition() - currentPos;
+	d =  this->GetPosition() - currentPos;
 
 	if (this->radius > 0)
 	{
-		angle = gmtl::length(d) / this->radius;
-		d = gmtl::makeNormal(gmtl::Vec3f(d[2], 0, -d[0])) * angle;
-		this->AddRotation(gmtl::Quatf(d[0], d[1], d[2], angle));
+		
+		angle = (gmtl::length(d) / this->radius);
+		d = gmtl::makeNormal(gmtl::Vec3f(d[2], 0, -d[0]));
+		this->AddRotation(gmtl::Quatf(d[0] * sin(angle / 2), d[1] * sin(angle / 2), d[2] * sin(angle / 2), cos(angle / 2)));
 	}
 }
 
