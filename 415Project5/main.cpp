@@ -51,14 +51,15 @@ struct Collision
 
 int mouseX, mouseY,
 mouseDeltaX, mouseDeltaY,
-ambientFlag, diffuseFlag, specFlag, texFlag, floorTexFlag, ballTexFlag, simStep;
+ambientFlag, diffuseFlag, specFlag, texFlag, floorTexFlag, ballTexFlag, 
+simStep;
 
 bool hit, c_tableCenter, c_cueFollow, c_cue;
 
 float azimuth, elevation, ballRadius, ballDiameter, floorY, cameraZFactor,
 		nearValue, farValue, leftValue, rightValue, topValue, bottomValue,
 		ballSpec, ballShine, floorSpec, floorShine,
-		drag, restitutionBall, restitutionWall, hitScale;
+		drag, restitutionBall, restitutionWall, hitScale, delta;
 
 
 GLuint program, Matrix_loc, vertposition_loc, normal_loc, modelview_loc,
@@ -226,12 +227,14 @@ void buildGraph()
 	
 	SceneObject* ball = new SceneObject("OBJs/smoothSphere.obj", ballRadius, program);
 	SceneObject* ball2 = new SceneObject("OBJs/smoothSphere.obj", ballRadius, program);
+	SceneObject* ball3 = new SceneObject("OBJs/smoothSphere.obj", ballRadius, program);
+
 	SceneObject* floor = new SceneObject("OBJs/cube.obj", ballDiameter * 10.0f, 1.0f, (ballDiameter * 10.0f)*2.0f, program);
 	gmtl::Matrix44f initialTranslation;
 	gmtl::Quatf initialRotation;
 
 		
-	//Ball 2
+	//Ball 1
 	ball->type = BALL;
 	ball->parent = NULL; 
 	ball->children.clear();
@@ -239,9 +242,7 @@ void buildGraph()
 	initialTranslation = gmtl::makeTrans<gmtl::Matrix44f>(gmtl::Vec3f(0.0f, ballRadius+1.0f, 100.0f));
 	initialTranslation.setState(gmtl::Matrix44f::TRANS);
 	ball->AddTranslation(initialTranslation);
-	ball->SetTexture(LoadTexture("textures/Ball1.ppm"));
-
-	ball->velocity = gmtl::Vec3f(0.0f, 0, -2.0f);
+	ball->SetTexture(LoadTexture("textures/earth.ppm"));
 	//ball->velocity = ZERO_VECTOR;
 	ball->acceleration = ZERO_VECTOR;
 
@@ -256,11 +257,23 @@ void buildGraph()
 	ball2->AddTranslation(initialTranslation);
 	ball2->SetTexture(LoadTexture("textures/moonmap.ppm"));
 
-	ball2->velocity = gmtl::Vec3f(0.0f, 0, 3.0f);
 	//ball2->velocity = ZERO_VECTOR;
 	ball2->acceleration = ZERO_VECTOR;
 
 	sceneGraph.push_back(ball2);
+
+	//Ball 3
+	ball3->type = BALL;
+	ball3->parent = NULL;
+	ball3->children.clear();
+	initialTranslation = gmtl::makeTrans<gmtl::Matrix44f>(gmtl::Vec3f(0.0f, ballRadius + 1.0f, 0.0f));
+	initialTranslation.setState(gmtl::Matrix44f::TRANS);
+	ball3->AddTranslation(initialTranslation);
+	ball3->SetTexture(LoadTexture("textures/mars.ppm"));
+
+	ball3->acceleration = ZERO_VECTOR;
+
+	sceneGraph.push_back(ball3);
 
 	//Floor
 	floor->type = FLOOR;
@@ -451,6 +464,8 @@ void ApplyForces()
 			{
 				(*it)->acceleration = (1 / (*it)->mass) * dragForce;
 			}
+			(*it)->velocity *= delta;
+			(*it)->acceleration *= delta;
 
 			(*it)->Move();
 		}
@@ -582,13 +597,20 @@ void keyboard(unsigned char key, int x, int y)
 			restitutionWall = max(0.0f, restitutionWall - 0.01f);
 			break;
 
-
 		case 'b': 
 			simStep += 1;
 			break;
 
 		case 'B':
 			simStep = max(simStep - 1,1);
+			break;
+
+		case 'h':
+			delta += max(1.0f, delta + 0.01f);
+			break;
+
+		case 'H':
+			delta = max(delta - 0.01f, 0.0f);
 			break;
 
 		case 'Z':
@@ -661,7 +683,7 @@ void idle()
 void init()
 {
 
-	elevation = azimuth =  0;
+	elevation = azimuth = 0;
 	ballRadius = floorY = 4.0f;
 	ballDiameter = ballRadius * 2.0f;
 	hit = c_tableCenter = c_cueFollow = c_cue = false;
@@ -670,6 +692,7 @@ void init()
 	ballSpec = floorSpec = restitutionBall = restitutionWall = 0.2f;
 	simStep = 1;
 
+	delta = 1.0f;
 	// Enable depth test (visible surface determination)
 	glEnable(GL_DEPTH_TEST);
 
